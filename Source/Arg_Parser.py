@@ -39,6 +39,13 @@ if __name__ == '__main__':
     parser.add_argument('--n_neighbors_h2m', default=0, type=int)
     parser.add_argument('--hrrr_analysis_only', default=0, type=int)
     parser.add_argument('--n_years', default=5, type=int)
+    parser.add_argument('--start_year', default=None, type=int)  # None: end_year - n_years + 1
+    parser.add_argument('--end_year', default=2023, type=int)
+    parser.add_argument('--train_years', default=None, type=int, nargs='+')  # None: legacy 70/20/10 split
+    parser.add_argument('--val_years', default=None, type=int, nargs='+')
+    parser.add_argument('--test_years', default=None, type=int, nargs='+')
+    parser.add_argument('--era5_region', default='World', type=str)
+    parser.add_argument('--use_is_real_mask', default=0, type=int)
     parser.add_argument('--interpolation_type', default=InterpolationType.none.value, type=int)
 
     # Model Hyperparameters

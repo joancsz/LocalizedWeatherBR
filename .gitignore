@@ -162,3 +162,10 @@ cython_debug/
 .DS_Store
 
 .idea/
+
+# LocalizedWeatherBR data and outputs
+data/
+*.nc
+*.zip
+ModelOutputs/
+*.pkl

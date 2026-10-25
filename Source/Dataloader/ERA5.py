@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import xarray as xr
 
+import Utils.Paths as Paths
 from Network.NetworkUtils import search_k_neighbors
 
 
@@ -102,7 +103,7 @@ class ERA5(object):
 
     def load_ERA5_monthly(self, month, region):
 
-        data_path = self.data_path / 'ERA5' / region / (f'surface_{self.year}_{month}' + self.extension)
+        data_path = Paths.era5_monthly_file(self.data_path, region, self.year, month)
         data = xr.open_mfdataset(data_path, engine=self.engine)
 
         data = data.sel(longitude=slice(self.lon_low, self.lon_up), latitude=slice(self.lat_up, self.lat_low))

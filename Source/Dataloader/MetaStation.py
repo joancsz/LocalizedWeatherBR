@@ -9,28 +9,29 @@ import pandas as pd
 import xarray as xr
 from shapely import points
 
+import Utils.Paths as Paths
+
 
 class MetaStation(object):
     def __init__(self, lat_low, lat_up, lon_low, lon_up, n_years=5, control_ratio=0.9, shapefile_path=None,
-                 data_path=Path('')):
+                 data_path=Path(''), start_year=None, end_year=2023):
 
         self.lat_low = lat_low
         self.lat_up = lat_up
         self.lon_low = lon_low
         self.lon_up = lon_up
-        self.n_years = n_years
         self.control_ratio = control_ratio
-        self.start_year = 2023 - n_years + 1
+        self.end_year = end_year
+        self.start_year = end_year - n_years + 1 if start_year is None else start_year
+        self.n_years = self.end_year - self.start_year + 1
         self.data_path = data_path
-        self.file_name = '%.2f_%.2f_%.2f_%.2f' % (self.lon_low, self.lon_up, self.lat_low, self.lat_up)
         self.shapefile_path = shapefile_path
-        if self.shapefile_path is not None:
-            self.file_name += self.shapefile_path.stem
-        self.filtered_file_name = self.file_name + f'_filtered_{self.control_ratio}'
+        self.file_name = Paths.region_file_name(self.lon_low, self.lon_up, self.lat_low, self.lat_up,
+                                                self.shapefile_path)
+        self.filtered_file_name = Paths.filtered_file_name(self.file_name, self.control_ratio)
 
-        self.all_station_file = data_path / (f'madis/stations/stations_{self.start_year}_2023_{self.file_name}.shp')
-        self.station_file = data_path / (
-            f'madis/stations/stations_{self.start_year}_2023_{self.filtered_file_name}.shp')
+        self.all_station_file = Paths.station_file(data_path, self.start_year, self.end_year, self.file_name)
+        self.station_file = Paths.station_file(data_path, self.start_year, self.end_year, self.filtered_file_name)
         self.data_dir = lambda year, month: data_path / f'madis/raw_monthly/mesonet/{year}/{month}.nc'
 
         Path(self.all_station_file).parent.mkdir(exist_ok=True, parents=True)
@@ -51,7 +52,7 @@ class MetaStation(object):
         print('Generating station table')
         counter = Counter([])
 
-        for year in range(self.start_year, 2024):
+        for year in range(self.start_year, self.end_year + 1):
             print(f'Generating station table for year {year}', flush=True)
             for month in range(1, 13):
                 print(f'Generating station table for month {month}', flush=True)
@@ -95,7 +96,8 @@ class MetaStation(object):
 
     def generate_filtered_station_table(self, counter):
 
-        counter = counter[counter.num >= self.n_years * 366 * 24 * self.control_ratio]
+        n_hours = len(pd.date_range(f'{self.start_year}-01-01', f'{self.end_year}-12-31 23:00', freq='h'))
+        counter = counter[counter.num >= n_hours * self.control_ratio]
 
         counter.to_file(self.station_file, index=False)
 

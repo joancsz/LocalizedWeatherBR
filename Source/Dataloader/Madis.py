@@ -9,18 +9,19 @@ import pandas as pd
 import xarray as xr
 from shapely import points
 
+import Utils.Paths as Paths
+
 
 class Madis(object):
     def __init__(self, times, coords_raw, coords, lat_low, lat_up, lon_low, lon_up, file_name, filtered_file_name,
-                 n_years=5,
+                 start_year=2019, end_year=2023,
                  data_path=Path('')):
 
-        # n_years comes from meta station
+        # start_year / end_year come from meta station
 
         self.times = times
         self.coords_raw = coords_raw  # list of geometry points
         self.coords = coords  # list of geometry points
-        self.n_years = n_years
         self.years = self.times.dt.year.data
         self.months = self.times.dt.month.data
         self.days = self.times.dt.day.data
@@ -39,19 +40,13 @@ class Madis(object):
 
         self.data_path = data_path
 
-        extension = 'nc'
         engine = 'netcdf4'
 
-        meta_year_cover = f'Meta-{2024 - self.n_years}-2023'
-        meta_year_folder = self.data_path / f'madis' / 'processed' / meta_year_cover
-        madis_raw_filename = f'madis_{self.years[0]}_{file_name}.{extension}'
-        madis_filename = f'madis_{self.years[0]}_{filtered_file_name}.{extension}'
+        Paths.madis_processed_dir(data_path, start_year, end_year).mkdir(exist_ok=True, parents=True)
 
-        if os.path.exists(meta_year_folder) == False:
-            os.system(f'mkdir -p {meta_year_folder}')
-
-        self.madis_raw_ds_path = f'{meta_year_folder}/{madis_raw_filename}'
-        self.madis_ds_path = f'{meta_year_folder}/{madis_filename}'
+        self.madis_raw_ds_path = Paths.madis_processed_file(data_path, start_year, end_year, self.years[0], file_name)
+        self.madis_ds_path = Paths.madis_processed_file(data_path, start_year, end_year, self.years[0],
+                                                        filtered_file_name)
 
         if os.path.exists(self.madis_ds_path):
             self.ds_xr = xr.open_mfdataset(self.madis_ds_path, engine=engine)

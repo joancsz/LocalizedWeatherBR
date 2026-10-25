@@ -13,7 +13,8 @@ class EvaluateModel:
     def __init__(self, model, data_loaders, madis_norm_dict, external_norm_dict, device, lead_hrs, madis_vars_i,
                  madis_vars_o, madis_vars, external_vars, loss_function=None, loss_function_report=None,
                  save_metrics_types=None, save_metrics_functions=None, per_variable_metrics_types=None,
-                 per_variable_metrics=None, model_type=ModelType.GNN, show_progress_bar=False, optimizer=None):
+                 per_variable_metrics=None, model_type=ModelType.GNN, show_progress_bar=False, optimizer=None,
+                 use_is_real_mask=False):
         self.model = model
         self.data_loaders = data_loaders
         self.madis_norm_dict = madis_norm_dict
@@ -33,6 +34,7 @@ class EvaluateModel:
         self.model_type = model_type
         self.show_progress_bar = show_progress_bar
         self.optimizer = optimizer
+        self.use_is_real_mask = use_is_real_mask
 
     def call_evaluate(self, station_type='train', save=False):
         data_loader = self.data_loaders[station_type]
@@ -58,6 +60,7 @@ class EvaluateModel:
             atten_sum = None
             atten_max = None
             time_list = []
+            is_real_list = []
 
         save_metrics_dict = dict()
         for save_metric in self.save_metrics_types:
@@ -108,8 +111,9 @@ class EvaluateModel:
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     self.optimizer.step()
 
-                loss_report += self.loss_function_report(out.detach(), y.detach()).cpu().numpy()
-                n_report += out[..., 0].numel()
+                loss_report += self.loss_function_report(out.detach(), y.detach(), is_real).cpu().numpy()
+                # mean real count per variable, equals out[..., 0].numel() when nothing is masked
+                n_report += is_real.sum().item() / is_real.shape[-1] if self.use_is_real_mask else out[..., 0].numel()
 
                 for save_metric in self.save_metrics_types:
                     save_metrics_dict[save_metric] += self.save_metrics_functions[save_metric](out.detach(), y.detach(),
@@ -138,6 +142,7 @@ class EvaluateModel:
                     Pred_list.append(out_save)
                     Target_list.append(y_save)
                     time_list.append(self.sample['time'].numpy())
+                    is_real_list.append(is_real.cpu().numpy())
 
                 y = y.detach()
                 out = out.detach()
@@ -159,6 +164,7 @@ class EvaluateModel:
             self.Preds = np.concatenate(Pred_list, axis=0)
             self.Targets = np.concatenate(Target_list, axis=0)
             self.Times = np.concatenate(time_list, axis=0)
+            self.IsReal = np.concatenate(is_real_list, axis=0)
 
             if atten_sum is not None:
                 self.Attns_Mean = atten_sum / atten_n
@@ -184,9 +190,10 @@ class EvaluateModel:
         return edge_index_ex2m, external_lat, external_lon, external_x
 
     def GetIsReal(self):
-        return np.concatenate(list(
-            map(lambda var: self.sample.get(var.name + '_is_real').unsqueeze(2) == 1,
-                self.madis_vars_o)), axis=-1)
+        # (n_batch, n_stations, n_vars_o) at the target hour, aligned with y
+        return torch.cat(list(
+            map(lambda var: self.sample.get(var.name + '_is_real')[:, :, -1].unsqueeze(-1) == 1,
+                self.madis_vars_o)), dim=-1).to(self.device)
 
     def ProcessSampleMadis(self, sample):
         madis_lon = sample[f'madis_lon'].to(self.device)

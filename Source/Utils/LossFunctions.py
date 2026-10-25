@@ -36,7 +36,7 @@ def custom_loss(output, target, u_index, v_index, other_index, logical=None, red
     error = torch.sqrt(error[..., other_index] + torch.finfo(torch.float32).eps)
 
     if logical is not None:
-        wind_error = wind_error[logical[..., 0]].flatten()
+        wind_error = wind_error[logical[..., u_index] & logical[..., v_index]].flatten()
         error = error[logical[..., other_index]].flatten()
 
     error = torch.cat((wind_error, error), dim=-1)
@@ -51,7 +51,7 @@ def custom_loss(output, target, u_index, v_index, other_index, logical=None, red
     return None
 
 
-def GetLossFunction(loss_function_type, madis_vars_o):
+def GetLossFunction(loss_function_type, madis_vars_o, use_is_real_mask=False):
     if loss_function_type == LossFunctionType.MSE:
         loss_function = lambda output, target, logical: nn.MSELoss(reduction='mean')(output, target)
     elif loss_function_type == LossFunctionType.WIND_VECTOR:
@@ -64,18 +64,19 @@ def GetLossFunction(loss_function_type, madis_vars_o):
         v_index = np.where(v_index)[0][0]
         other_index = np.where(other_index)[0]
 
-        loss_function = lambda output, target, logical: custom_loss(output, target, u_index, v_index, other_index)
+        loss_function = lambda output, target, logical: custom_loss(output, target, u_index, v_index, other_index,
+                                                                    logical if use_is_real_mask else None)
     else:
         raise ValueError(f"Unknown loss function type: {loss_function_type}")
 
     return loss_function
 
 
-def GetLossFunctionReport(loss_function_type, madis_vars_o):
+def GetLossFunctionReport(loss_function_type, madis_vars_o, use_is_real_mask=False):
     if loss_function_type == LossFunctionType.MSE:
-        loss_function_report = nn.MSELoss(reduction='sum')
+        loss_function_report = lambda output, target, logical: nn.MSELoss(reduction='sum')(output, target)
     elif loss_function_type == LossFunctionType.WIND_VECTOR:
-        loss_function_report = lambda output, target: wind_loss(output, target, reduction='sum')
+        loss_function_report = lambda output, target, logical: wind_loss(output, target, reduction='sum')
     elif loss_function_type == LossFunctionType.CUSTOM:
         u_index = np.array(madis_vars_o) == EnvVariables.u
         v_index = np.array(madis_vars_o) == EnvVariables.v
@@ -84,15 +85,17 @@ def GetLossFunctionReport(loss_function_type, madis_vars_o):
         v_index = np.where(v_index)[0][0]
         other_index = np.where(other_index)[0]
 
-        loss_function_report = lambda output, target: custom_loss(output, target, u_index, v_index, other_index,
-                                                                  reduction='sum')
+        loss_function_report = lambda output, target, logical: custom_loss(output, target, u_index, v_index,
+                                                                           other_index,
+                                                                           logical if use_is_real_mask else None,
+                                                                           reduction='sum')
     else:
         raise ValueError(f"Unknown loss function type: {loss_function_type}")
 
     return loss_function_report
 
 
-def SetupSaveMetrics(save_metrics_types, madis_vars_o):
+def SetupSaveMetrics(save_metrics_types, madis_vars_o, use_is_real_mask=False):
     save_metrics = dict()
     for save_metric_type in save_metrics_types:
         if save_metric_type == LossFunctionType.MSE:
@@ -113,7 +116,10 @@ def SetupSaveMetrics(save_metrics_types, madis_vars_o):
 
             save_metrics[save_metric_type] = lambda output, target, logical: custom_loss(output, target, u_index,
                                                                                          v_index,
-                                                                                         other_index, reduction='sum')
+                                                                                         other_index,
+                                                                                         logical if use_is_real_mask
+                                                                                         else None,
+                                                                                         reduction='sum')
             continue
 
     return save_metrics

@@ -61,6 +61,13 @@ class Main:
         self.model_type = args.model_type
         self.madis_control_ratio = args.madis_control_ratio
         self.n_years = args.n_years
+        self.start_year = args.start_year
+        self.end_year = args.end_year
+        self.train_years = args.train_years
+        self.val_years = args.val_years
+        self.test_years = args.test_years
+        self.era5_region = args.era5_region
+        self.use_is_real_mask = args.use_is_real_mask
         self.n_passing = args.n_passing
         self.n_neighbors_m2m = args.n_neighbors_m2m
         self.network_construction_method = args.network_construction_method
@@ -99,12 +106,13 @@ class Main:
         ##### Load Data #####
         meta_station = MetaStation(self.lat_low, self.lat_up, self.lon_low, self.lon_up, self.n_years,
                                    self.madis_control_ratio,
-                                   shapefile_path=self.shapefile_path, data_path=self.data_path)
+                                   shapefile_path=self.shapefile_path, data_path=self.data_path,
+                                   start_year=self.start_year, end_year=self.end_year)
 
         self.madis_network = self.BuildMadisNetwork(meta_station, self.n_neighbors_m2m,
                                                     self.network_construction_method)
 
-        years = list(range(2024 - self.n_years, 2024))
+        years = list(range(self.start_year, self.end_year + 1))
 
         external_data_objects, self.external_len, self.external_network, n_neighbors_ex2m = self.BuildExternalNetwork(
             self.data_path,
@@ -123,7 +131,7 @@ class Main:
             for k, year in enumerate(years):
                 external_data_objects[year].LoadDataToMemory()
 
-        loaders = self.CreateDataLoaders(Data_List, self.batch_size, self.n_years)
+        loaders = self.CreateDataLoaders(Data_List, self.batch_size, years)
 
         n_stations = self.madis_network.n_stations
 
@@ -152,9 +160,9 @@ class Main:
         print('Parameter Number: ', nn_params, flush=True)
         print(' ', flush=True)
 
-        loss_function = GetLossFunction(self.loss_function_type, self.madis_vars_o)
-        loss_function_report = GetLossFunctionReport(self.loss_function_type, self.madis_vars_o)
-        save_metrics = SetupSaveMetrics(self.save_metrics_types, self.madis_vars_o)
+        loss_function = GetLossFunction(self.loss_function_type, self.madis_vars_o, self.use_is_real_mask)
+        loss_function_report = GetLossFunctionReport(self.loss_function_type, self.madis_vars_o, self.use_is_real_mask)
+        save_metrics = SetupSaveMetrics(self.save_metrics_types, self.madis_vars_o, self.use_is_real_mask)
 
         use_wb = self.use_wb
         if use_wb:
@@ -259,13 +267,14 @@ class Main:
                                       save_metrics_types=save_metrics_types, save_metrics_functions=save_metrics,
                                       per_variable_metrics_types=per_variable_metrics_types,
                                       per_variable_metrics=per_variable_metrics, model_type=model_type,
-                                      show_progress_bar=show_progress_bar, optimizer=optimizer)
+                                      show_progress_bar=show_progress_bar, optimizer=optimizer,
+                                      use_is_real_mask=self.use_is_real_mask)
         return evaluateModel
 
-    def CreateDataLoaders(self, Data_List, batch_size, n_years):
-        Train_Dataset = ConcatDataset(Data_List[:int(n_years * 0.7)])
-        Valid_Dataset = ConcatDataset(Data_List[int(n_years * 0.7):int(n_years * 0.7) + int(n_years * 0.2)])
-        Test_Dataset = ConcatDataset(Data_List[int(n_years * 0.7) + int(n_years * 0.2):])
+    def CreateDataLoaders(self, Data_List, batch_size, years):
+        Train_Dataset = ConcatDataset([d for d, y in zip(Data_List, years) if y in self.train_years])
+        Valid_Dataset = ConcatDataset([d for d, y in zip(Data_List, years) if y in self.val_years])
+        Test_Dataset = ConcatDataset([d for d, y in zip(Data_List, years) if y in self.test_years])
         loaders = dict()
         loaders['train'] = DataLoader(Train_Dataset, batch_size=batch_size, shuffle=True)
         loaders['val'] = DataLoader(Valid_Dataset, batch_size=batch_size, shuffle=True)
@@ -291,11 +300,12 @@ class Main:
                 if interpolation_type == InterpolationType.none:
                     external_data_objects[year] = era5_loader(year,
                                                               madis_network, meta_station, n_neighbors_e2m,
-                                                              data_path=data_path)
+                                                              region=self.era5_region, data_path=data_path)
                 else:
                     external_data_objects[year] = era5_loader(year,
                                                               madis_network, meta_station, n_neighbors_e2m,
-                                                              interpolation_type, data_path=data_path)
+                                                              interpolation_type, region=self.era5_region,
+                                                              data_path=data_path)
 
             if interpolation_type == InterpolationType.none:
                 external_network = self.BuildERA5Network(external_data_objects[years[0]].data, madis_network,
@@ -360,6 +370,10 @@ class Main:
 
         serialized_data = pickle.dumps(evaluateModelTest.Times)
         with open(output_saving_path / f'Times_{metric}_min.pkl', 'wb') as file:
+            file.write(serialized_data)
+
+        serialized_data = pickle.dumps(evaluateModelTest.IsReal)
+        with open(output_saving_path / f'IsReal_{metric}_min.pkl', 'wb') as file:
             file.write(serialized_data)
 
         if evaluateModelTest.Attns_Mean is not None:

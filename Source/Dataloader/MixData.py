@@ -42,7 +42,8 @@ class MixData(Dataset):
 
         self.Madis = Madis(self.time_line, stat_coords_raw, self.stat_coords, meta_station.lat_low, meta_station.lat_up,
                            meta_station.lon_low, meta_station.lon_up, meta_station.file_name,
-                           meta_station.filtered_file_name, meta_station.n_years, data_path=data_path)
+                           meta_station.filtered_file_name, meta_station.start_year, meta_station.end_year,
+                           data_path=data_path)
         self.madis_data = self.Madis.ds_xr
 
         self.madis_mins_dict = dict()

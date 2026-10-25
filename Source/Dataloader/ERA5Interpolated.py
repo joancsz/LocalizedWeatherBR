@@ -37,7 +37,7 @@ class ERA5Interpolated(ERA5):
 
         if self.interpolation_type == InterpolationType.Stacked:
             self.data = self.data[['u', 'v', 'temp', 'dewpoint']].sortby('node')
-            self.data = self.data.drop(['expver', 'number'])
+            self.data = self.data.drop_vars(['expver', 'number'], errors='ignore')
             pos = torch.from_numpy(np.stack([self.data.longitude, self.data.latitude], axis=-1).astype(np.float32))
             era5nodes = search_k_neighbors(self.madis_network.pos, pos, self.n_neighbors_e2m).long().numpy()
             # self.data['node'] = np.arange(len(self.data.node))
@@ -52,7 +52,7 @@ class ERA5Interpolated(ERA5):
 
         if self.interpolation_type == InterpolationType.Nearest:
             self.data = self.data[['u', 'v', 'temp', 'dewpoint']].sortby(['latitude', 'longitude'])
-            self.data = self.data.drop(['expver', 'number'])
+            self.data = self.data.drop_vars(['expver', 'number'], errors='ignore')
             self.data = self.data.interp(latitude=('stations', self.madis_network.pos[:, 1]),
                                          longitude=('stations', self.madis_network.pos[:, 0]), method='nearest',
                                          assume_sorted=True)[['u', 'v', 'temp', 'dewpoint']].load()
@@ -65,7 +65,7 @@ class ERA5Interpolated(ERA5):
 
         if self.interpolation_type == InterpolationType.BiCubic:
             self.data = self.data[['u', 'v', 'temp', 'dewpoint']].sortby(['latitude', 'longitude'])
-            self.data = self.data.drop(['expver', 'number'])
+            self.data = self.data.drop_vars(['expver', 'number'], errors='ignore')
             self.data = self.data.interp(latitude=('stations', self.madis_network.pos[:, 1]),
                                          longitude=('stations', self.madis_network.pos[:, 0]), method='cubic',
                                          assume_sorted=True)[['u', 'v', 'temp', 'dewpoint']].load()
