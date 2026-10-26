@@ -1,0 +1,20 @@
+# P2 NE-US reproduction, 20 epochs, Transformer + ERA5 Nearest (run on a GPU, e.g. notebooks/colab_setup.ipynb).
+# Unset keys take Source/run.py DEFAULTS. Enum keys use the integer values in Source/Settings/Settings.py.
+data_path: ${DATA_ROOT}/neus
+output_saving_path: ModelOutputs/neus_vit_20
+shapefile_path: Shapefiles/Regions/northeastern_buffered.shp
+model_type: 2                   # ViT (Transformer)
+network_construction_method: 3  # FULLY_CONNECTED
+interpolation_type: 0           # Nearest
+n_neighbors_e2m: 1
+n_neighbors_h2m: 0
+lead_hrs: 1
+epochs: 20
+madis_control_ratio: 0.9
+start_year: 2019
+end_year: 2023
+train_years: [2019, 2020, 2021]
+val_years: [2022]
+test_years: [2023]
+era5_region: World
+use_is_real_mask: false
