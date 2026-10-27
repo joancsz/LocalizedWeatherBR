@@ -52,7 +52,7 @@ and trains for 200 epochs; the gap is recorded, not tuned away.
 |---|---|---|---|
 | paper, Transformer + ERA5 (avg. over leads) | 0.50 | 1.44 | 1.55 |
 | Transformer + ERA5 Nearest, 20 ep, lead 1 h | 0.399 | 0.953 | 0.962 |
-| GNN (Delaunay) + ERA5 grid, 20 ep, lead 1 h | pending | pending | pending |
+| GNN (Delaunay) + ERA5 grid, 20 ep, lead 1 h | 0.574 | 2.278 | 1.633 |
 
 Transformer run (2026-10-26, Colab A100, torch 2.14.1): train 1.24706 → 0.32974, best val 0.33702 at epoch 19 (the
 checkpoint used for test); val was still falling, so 20 epochs is not converged. All-entries metrics: 0.389 / 0.966 / 0.932.
@@ -65,3 +65,8 @@ First GNN attempt crashed at the first batch (`shape '[128, 358, 1]' is invalid 
 `MPNN.build_graph_external`): with an interpolated ERA5 no external network is built, so `MixData` passes placeholder
 positions. Same behaviour in the original code. Fixed in the config (`interpolation_type: -1`, `n_neighbors_e2m: 8`),
 and `Main` now asserts this combination up front.
+
+GNN run (2026-10-26, Colab L4, torch 2.14.1, after the fix): train 3.55598 → 0.53493, best val 0.56589 at epoch 20 (the
+last epoch, used for test); val was still falling steeply, so the GNN is further from convergence than the Transformer.
+All-entries metrics: 0.578 / 2.335 / 1.743. Its T RMSE is worse than the paper's lead-averaged number; this is
+under-training at 20 epochs, not tuned. Metrics re-computed locally from the downloaded `ModelOutputs` match the notebook output.
