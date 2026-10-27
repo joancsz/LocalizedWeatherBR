@@ -1,12 +1,12 @@
-# P2 NE-US reproduction, 20 epochs, GNN + ERA5 Nearest (run on a GPU, e.g. notebooks/colab_setup.ipynb).
+# P2 NE-US reproduction, 20 epochs, GNN + ERA5 grid nodes (run on a GPU, e.g. notebooks/colab_setup.ipynb).
 # Unset keys take Source/run.py DEFAULTS. Enum keys use the integer values in Source/Settings/Settings.py.
 data_path: ${DATA_ROOT}/neus
 output_saving_path: ModelOutputs/neus_gnn_20
 shapefile_path: Shapefiles/Regions/northeastern_buffered.shp
 model_type: 1                   # GNN (MPNN)
 network_construction_method: 2  # DELAUNAY, as in the paper
-interpolation_type: 0           # Nearest
-n_neighbors_e2m: 1
+interpolation_type: -1          # none: GNN takes raw ERA5 grid nodes (Nearest gives it no grid)
+n_neighbors_e2m: 8
 n_neighbors_h2m: 0
 lead_hrs: 1
 epochs: 20

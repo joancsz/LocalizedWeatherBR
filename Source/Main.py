@@ -77,6 +77,10 @@ class Main:
         self.hrrr_analysis_only = args.hrrr_analysis_only
 
         self.interpolation_type = args.interpolation_type
+        # interpolated ERA5 builds no external network, so MPNN gets no grid positions
+        assert not (self.model_type == ModelType.GNN and self.n_neighbors_e2m > 0 and
+                    self.interpolation_type != InterpolationType.none), \
+            'GNN with ERA5 needs interpolation_type none (-1)'
 
         self.madis_vars_i = args.madis_vars_i
         self.madis_vars_o = args.madis_vars_o

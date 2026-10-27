@@ -44,11 +44,24 @@ python scripts/eval/metrics.py --run-dir $DATA_ROOT/neus/ModelOutputs/neus_vit_2
 python scripts/eval/metrics.py --run-dir $DATA_ROOT/neus/ModelOutputs/neus_gnn_20
 ```
 
-Both: ERA5 Nearest, `n_neighbors_e2m=1`, `lead_hrs=1`, 20 epochs, real-only metrics. The GNN uses the DELAUNAY graph.
-The paper averages over leads and trains for 200 epochs; the gap is recorded, not tuned away.
+Transformer: ERA5 Nearest, `n_neighbors_e2m=1`. GNN: DELAUNAY graph, raw ERA5 grid nodes (`interpolation_type=-1`,
+`n_neighbors_e2m=8`). Both: `lead_hrs=1`, 20 epochs, metrics on real observations only. The paper averages over leads
+and trains for 200 epochs; the gap is recorded, not tuned away.
 
 | model | wind-vector error (m/s) | T RMSE (°C) | Td RMSE (°C) |
 |---|---|---|---|
-| paper, Transformer + ERA5 | 0.50 | 1.44 | 1.55 |
-| Transformer + ERA5, 20 ep | pending | pending | pending |
-| GNN (Delaunay) + ERA5, 20 ep | pending | pending | pending |
+| paper, Transformer + ERA5 (avg. over leads) | 0.50 | 1.44 | 1.55 |
+| Transformer + ERA5 Nearest, 20 ep, lead 1 h | 0.399 | 0.953 | 0.962 |
+| GNN (Delaunay) + ERA5 grid, 20 ep, lead 1 h | pending | pending | pending |
+
+Transformer run (2026-10-26, Colab A100, torch 2.14.1): train 1.24706 → 0.32974, best val 0.33702 at epoch 19 (the
+checkpoint used for test); val was still falling, so 20 epochs is not converged. All-entries metrics: 0.389 / 0.966 / 0.932.
+The 1 h lead is far easier than the paper's average over leads, which is why it beats the paper; only the
+multi-lead sweep (E5) gives a like-for-like comparison. Real-only Td RMSE is *higher* than all-entries (0.962 vs 0.932),
+because filled values are forward-filled and therefore easy to predict: evaluate on real observations only.
+No torch seed is set in `Main`, so the Colab epoch-1 loss (1.24706) differs from the seeded local runs (1.26501).
+
+First GNN attempt crashed at the first batch (`shape '[128, 358, 1]' is invalid for input of size 128` in
+`MPNN.build_graph_external`): with an interpolated ERA5 no external network is built, so `MixData` passes placeholder
+positions. Same behaviour in the original code. Fixed in the config (`interpolation_type: -1`, `n_neighbors_e2m: 8`),
+and `Main` now asserts this combination up front.
