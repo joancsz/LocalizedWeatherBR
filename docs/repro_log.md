@@ -11,12 +11,12 @@ Setup: NE-US Zenodo data at `data/`, Transformer (ViT), ERA5 Nearest, `n_neighbo
 | unmodified `a0329a5` | 1.26501 | 0.79431 |
 | phase 1 (`configs/neus_repro.yaml`, `use_is_real_mask: false`) | 1.26501 | 0.79431 |
 
-2-epoch run (plan acceptance), same setup: one CPU epoch takes ~12 h (the old 2-epoch run took 1475 min).
+2-epoch run (plan acceptance), same setup: the old 2-epoch run took 1475 min of wall time and the new one 687 min (same machine, run one after the other).
 
 | code | train_loss ep1 | train_loss ep2 | valid_loss ep2 |
 |---|---|---|---|
 | unmodified `a0329a5` | 1.26501 | 0.66544 | 0.57957 |
-| phase 1 | 1.26501 | pending | pending |
+| phase 1 | 1.26501 | 0.66544 | 0.57957 |
 
 Commands: a scratch harness built the old `LocalLauncher` args (with `model_type=ViT`) for the base worktree, and
 `run.load_config('configs/neus_repro.yaml')` for the new code, both with `epochs=1`.
