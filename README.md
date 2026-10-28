@@ -1,7 +1,73 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2410.12938-b31b1b.svg)](https://arxiv.org/abs/2410.12938)
 [![DOI](https://zenodo.org/badge/872621898.svg)](https://doi.org/10.5281/zenodo.16933936)
 
-# Localized Weather
+# LocalizedWeatherBR
+
+Fork of LocalizedWeather ([code DOI](https://doi.org/10.5281/zenodo.16933936), Yang et al., arXiv:2410.12938)
+that ports the station-downscaling models from the Northeastern US to **Northeast Brazil** (CE, RN, PB, PE):
+INMET automatic stations take the place of MADIS, ERA5 stays the gridded input, and there is no HRRR.
+It is a standalone research fork and will not be merged back upstream. The working plan is `PLAN_BRAZIL.md`.
+
+## Running it
+
+Everything runs from the notebooks, in order, on Colab (GPU for training) or on a PC. The first cell of each
+notebook detects which: on Colab it clones the repo, installs `requirements.txt` and mounts Drive
+(`DATA_ROOT=/content/drive/MyDrive/LocalizedWeather`); on a PC set the `DATA_ROOT` environment variable before
+starting Jupyter. `DATA_ROOT` holds one folder per dataset: `neus/` and `brazil/`.
+
+| notebook | phase | what it does |
+|---|---|---|
+| `notebooks/01_neus_reproduction.ipynb` | 1–2 | Zenodo NE-US data, unit tests, 20-epoch Transformer and GNN runs, test metrics |
+| `notebooks/02_brazil_data.ipynb` | 3 | region shapefile, INMET download + conversion, ERA5 download |
+
+Results and decisions are logged in `docs/repro_log.md`.
+
+## Changes from upstream
+
+- **Config-driven runs**: `python Source/run.py --config configs/<name>.yaml` replaces editing `LocalLauncher.py`
+  (which still works). Unset keys take the old launcher defaults; `${DATA_ROOT}` is expanded in `data_path`.
+- **Years and splits**: `start_year`, `end_year`, `train_years`, `val_years`, `test_years` replace the hardcoded
+  2019–2023 and the 70/20/10 split; `era5_region` picks `ERA5/<region>/`.
+- **Observation mask**: `use_is_real_mask: true` excludes gap-filled station values from the loss and metrics
+  (off by default, so the NE-US numbers are unchanged). Test runs also save `IsReal_*.pkl` next to the predictions.
+- **Fixes**: ERA5 files without `expver`/`number` load; the GNN + interpolated ERA5 combination (which crashed
+  upstream) is rejected up front; k-NN uses `torch.cdist` so `pyg-lib` is not needed.
+- **File names** come from one place, `Source/Utils/Paths.py`, shared by `Source/` and the scripts.
+- **Scripts**: `scripts/neus/` (Zenodo download), `scripts/brazil/` (Brazil data pipeline),
+  `scripts/eval/metrics.py` (test metrics in physical units, real observations only).
+- Pinned `requirements.txt`; tests in `tests/` (`pytest tests/`).
+
+## Brazil data pipeline (`scripts/brazil/`)
+
+Each script takes `--data-root` and `--years`, logs what it does, skips finished work and exits non-zero on failure.
+
+1. `build_region.py`: IBGE 2020 state boundaries for CE, RN, PB, PE, clipped to lon [-41.5, -34.5],
+   lat [-9.5, -2.5] (drops Fernando de Noronha), buffered 0.1°. Bounds: lon [-41.52, -34.69], lat [-9.58, -2.68].
+2. `download_inmet.py`: INMET annual archives (`portal.inmet.gov.br/uploads/dadoshistoricos/{year}.zip`) to
+   `inmet/raw/{year}/`. The portal resets scripted connections from some networks; zips placed by hand in
+   `inmet/zips/` are used as they are.
+3. `inmet_to_localized.py` (parser in `inmet_parser.py`): parses both INMET CSV header variants, applies QC (range
+   limits, dewpoint ≤ T + 0.5 °C, 6 h flat lines), converts to MADIS units (u/v m/s, K, W/m²), checks that the
+   diurnal temperature peak falls at 14–20 UTC, and writes the station shapefiles and yearly processed NetCDFs
+   that `MetaStation`/`Madis` load directly, plus `inmet/station_counts.csv` (stations kept per control ratio).
+4. `download_era5.py`: monthly ERA5 from the Copernicus CDS (`.cdsapirc` in `~`, the repo root or `$DATA_ROOT`),
+   over exactly the integer box the ERA5 loader slices (lon [-44, -33], lat [-12, -1]), with per-file checks.
+
+Brazil data layout (`$DATA_ROOT/brazil/`, used as `data_path`):
+```
+Shapefiles/Regions/ne_brazil_buffered.shp
+inmet/zips/{year}.zip, inmet/raw/{year}/, inmet/station_counts.csv
+madis/stations/stations_{start}_{end}_<file_name>[_filtered_<ratio>].shp
+madis/processed/Meta-{start}-{end}/madis_{year}_<file_name>[_filtered_<ratio>].nc
+ERA5/NEBrazil/surface_{year}_{month}.nc
+```
+with `<file_name>` = `-41.52_-34.69_-9.58_-2.68ne_brazil_buffered`.
+
+---
+
+# Original README (upstream paper)
+
+## Localized Weather
 
 This repository contains the code and data for the paper ["Local Off-Grid Weather Forecasting with Multi-Modal Earth Observation Data"](https://arxiv.org/abs/2410.12938).
 

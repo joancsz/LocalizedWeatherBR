@@ -70,3 +70,32 @@ GNN run (2026-10-26, Colab L4, torch 2.14.1, after the fix): train 3.55598 → 0
 last epoch, used for test); val was still falling steeply, so the GNN is further from convergence than the Transformer.
 All-entries metrics: 0.578 / 2.335 / 1.743. Its T RMSE is worse than the paper's lead-averaged number; this is
 under-training at 20 epochs, not tuned. Metrics re-computed locally from the downloaded `ModelOutputs` match the notebook output.
+
+## P3: NE Brazil data pipeline (in progress)
+
+Run order: `notebooks/02_brazil_data.ipynb`. Deviations from `PLAN_BRAZIL.md` §4, and why:
+
+- **Region source**: IBGE malhas API (the plan's fallback), not `geobr`. Same 2020 polygons, no extra dependency.
+  The API gzips its response unconditionally, so the script decompresses before parsing.
+- **INMET download**: `portal.inmet.gov.br` resets scripted connections from the dev PC (Zenodo and IBGE work from
+  the same machine), and the scripted download also failed on Colab. Per the plan, no mirror was tried; the 2018–2025 zips were downloaded by hand
+  into `$DATA_ROOT/brazil/inmet/zips/`, which `download_inmet.py` extracts without downloading.
+- **ERA5 area**: the plan's "region bounds + 2°" does not cover the loader's slice, which is
+  `floor(low − 1.5) .. ceil(up + 1.5)` = lon [−44, −33], lat [−12, −1] (bounds + 2° stops at lon −43.52).
+  `download_era5.py` requests exactly that integer box. The new CDS returns a zip (instant + accumulated streams)
+  for this variable mix; the script merges it into one NetCDF per month.
+- **Filtered files**: the adapter writes the all-station shapefile and all-station processed NetCDFs; the filtered
+  shapefile comes from `MetaStation` and the filtered NetCDFs from `Madis.createFile`'s selection, so station order
+  (I1) is the training code's own. Another `madis_control_ratio` needs no rerun.
+- **INMET 2019 format** (589 files, all parse): metadata keys have literal `?` for accented letters, missing values
+  are empty strings (no `-9999`), one station (A302) writes latitude `,916877`.
+
+Single-year check on 2019 (dev PC, `--years 2019`): 48 of 589 stations inside the region; stations kept per
+control ratio 0.6/0.7/0.8/0.9 = 44/43/35/25. Diurnal temperature peak (UTC) across stations: 15 h ×7, 16 h ×10,
+17 h ×17, 18 h ×14, median 17 UTC, so timestamps are UTC. Real fraction at 0.8: u/v/T 0.94, Td 0.92, solar 0.52
+(night hours are blank). The repo's `Madis` loads the filtered file; I1, I2 and I4 hold. Counts for 2019–2023 come
+from the full run.
+
+ERA5 check on 2019 (12 monthly CDS files, about 4–5 min queue each): the repo's `ERA5Interpolated` (Nearest,
+`era5_region: NEBrazil`) builds the interpolated file for the 35 stations, 8760 hours, no NaN. Median diurnal
+temperature peak is 17 UTC for both INMET and ERA5-nearest (I3); 2019 station-mean T is 299.54 K (INMET) vs 299.97 K (ERA5).
