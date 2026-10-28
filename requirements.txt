@@ -1,4 +1,4 @@
-# Mirrors the imports used by Source/ and tests/. CPU wheel: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Mirrors the imports used by Source/, scripts/ and tests/. CPU wheel: pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch==2.14.1
 torch-geometric==2.8.1
 numpy==2.5.4
@@ -14,5 +14,6 @@ networkx==3.6.1
 matplotlib==3.11.2
 tqdm==4.70.1
 PyYAML==6.0.3
+cdsapi==0.7.7
 pytest==9.1.1
 # HRRR paths only: herbie-data; W&B telemetry only: wandb
