@@ -93,9 +93,21 @@ Run order: `notebooks/02_brazil_data.ipynb`. Deviations from `PLAN_BRAZIL.md` §
 Single-year check on 2019 (dev PC, `--years 2019`): 48 of 589 stations inside the region; stations kept per
 control ratio 0.6/0.7/0.8/0.9 = 44/43/35/25. Diurnal temperature peak (UTC) across stations: 15 h ×7, 16 h ×10,
 17 h ×17, 18 h ×14, median 17 UTC, so timestamps are UTC. Real fraction at 0.8: u/v/T 0.94, Td 0.92, solar 0.52
-(night hours are blank). The repo's `Madis` loads the filtered file; I1, I2 and I4 hold. Counts for 2019–2023 come
-from the full run.
+(night hours are blank). The repo's `Madis` loads the filtered file; I1, I2 and I4 hold.
+
+Full run 2019–2023 (Colab, 2026-10-28): 48 stations inside the region every year; stations kept per control ratio
+0.6/0.7/0.8/0.9 = **26/23/15/6**. Fewer than 25 survive at 0.8. **Decision (2026-10-28): control ratio 0.6** (26 stations), the only
+ratio at or above ~25; `use_is_real_mask: true` keeps the filled hours of the sparser stations out of the loss.
+QC removes almost nothing (median 0 for every variable); the losses are station outages, not QC. Exceptions: wind
+direction at A344 (42% rejected) and A352 (24%), both long flat lines, i.e. stuck vanes. Diurnal peak (UTC) 15 h ×7,
+16 h ×13, 17 h ×15, 18 h ×13, median 17. Stations that moved more than 0.01°: A314 and A332 (2022), A339 (2023);
+the newer position is used. The region's 0.1° buffer admits A327 (Palmeira dos Índios, AL), just south of PE.
 
 ERA5 check on 2019 (12 monthly CDS files, about 4–5 min queue each): the repo's `ERA5Interpolated` (Nearest,
 `era5_region: NEBrazil`) builds the interpolated file for the 35 stations, 8760 hours, no NaN. Median diurnal
 temperature peak is 17 UTC for both INMET and ERA5-nearest (I3); 2019 station-mean T is 299.54 K (INMET) vs 299.97 K (ERA5).
+
+`validate_dataset.py` on the 2019 dev-PC data (ratio 0.8, 35 stations): all checks pass. Diurnal peak gap INMET vs
+ERA5-nearest: 0 h at 20 stations, 1 h at 15. ρ² ERA5-nearest vs INMET over 2019: u 0.28, v 0.45, T 0.86, Td 0.63;
+single days 0.13–0.27 for u. Negative test: reversing the station order of the filtered file fails I1 and the
+diurnal check (exit 1). The 2019–2023 report at 0.6 comes from notebook 02 on Colab.

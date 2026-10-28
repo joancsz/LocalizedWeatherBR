@@ -18,7 +18,7 @@ starting Jupyter. `DATA_ROOT` holds one folder per dataset: `neus/` and `brazil/
 | notebook | phase | what it does |
 |---|---|---|
 | `notebooks/01_neus_reproduction.ipynb` | 1–2 | Zenodo NE-US data, unit tests, 20-epoch Transformer and GNN runs, test metrics |
-| `notebooks/02_brazil_data.ipynb` | 3 | region shapefile, INMET download + conversion, ERA5 download |
+| `notebooks/02_brazil_data.ipynb` | 3 | region shapefile, INMET download + conversion, ERA5 download, validation report |
 
 Results and decisions are logged in `docs/repro_log.md`.
 
@@ -54,11 +54,17 @@ Each script takes `--data-root` and `--years`, logs what it does, skips finished
    that `MetaStation`/`Madis` load directly, plus `inmet/station_counts.csv` (stations kept per control ratio).
 4. `download_era5.py`: monthly ERA5 from the Copernicus CDS (`.cdsapirc` in `~`, the repo root or `$DATA_ROOT`),
    over exactly the integer box the ERA5 loader slices (lon [-44, -33], lat [-12, -1]), with per-file checks.
+5. `validate_dataset.py`: checks the schema and invariants I1–I5 on every station and ERA5 file (station order,
+   time axis, UTC alignment incl. a ±1 h diurnal-peak match against ERA5, no NaN, grid orientation) and writes
+   `report/brazil_data_report.md` with a station map, an availability heatmap and ERA5-vs-INMET ρ².
+
+Control ratio: **0.6** (26 stations over 2019–2023; 0.8 keeps only 15). See `docs/repro_log.md` P3.
 
 Brazil data layout (`$DATA_ROOT/brazil/`, used as `data_path`):
 ```
 Shapefiles/Regions/ne_brazil_buffered.shp
 inmet/zips/{year}.zip, inmet/raw/{year}/, inmet/station_counts.csv
+report/brazil_data_report.md, report/*.png
 madis/stations/stations_{start}_{end}_<file_name>[_filtered_<ratio>].shp
 madis/processed/Meta-{start}-{end}/madis_{year}_<file_name>[_filtered_<ratio>].nc
 ERA5/NEBrazil/surface_{year}_{month}.nc

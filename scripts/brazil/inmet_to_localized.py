@@ -1,6 +1,6 @@
 """Turn INMET raw CSVs into the station shapefiles and processed NetCDFs that Source/ reads as MADIS.
 
-usage: python scripts/brazil/inmet_to_localized.py --data-root $DATA_ROOT [--years 2019 ... 2023] [--control-ratio 0.8]
+usage: python scripts/brazil/inmet_to_localized.py --data-root $DATA_ROOT [--years 2019 ... 2023] [--control-ratio 0.6]
 
 Reads  <data-root>/brazil/inmet/raw/{year}/**/*.CSV and the region shapefile from build_region.py.
 Writes, under data_path = <data-root>/brazil (names from Source/Utils/Paths.py):
@@ -113,7 +113,7 @@ def main(argv=None):
     parser.add_argument('--years', nargs='+', type=int, default=[2019, 2020, 2021, 2022, 2023])
     parser.add_argument('--shapefile', default='Shapefiles/Regions/ne_brazil_buffered.shp',
                         help='relative to <data-root>/brazil, as shapefile_path in the config')
-    parser.add_argument('--control-ratio', type=float, default=0.8)
+    parser.add_argument('--control-ratio', type=float, default=0.6)  # 0.8 keeps only 15 stations over 2019-2023
     args = parser.parse_args(argv)
 
     years = sorted(args.years)
