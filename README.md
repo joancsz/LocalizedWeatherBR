@@ -43,6 +43,8 @@ Each script takes `--data-root` and `--years`, logs what it does, skips finished
 
 1. `build_region.py`: IBGE 2020 state boundaries for CE, RN, PB, PE, clipped to lon [-41.5, -34.5],
    lat [-9.5, -2.5] (drops Fernando de Noronha), buffered 0.1°. Bounds: lon [-41.52, -34.69], lat [-9.58, -2.68].
+   IBGE times out from Colab; for the default states and bbox the script then uses the bundled
+   `scripts/brazil/ne_brazil_buffered.geojson` (the same polygon, built from IBGE).
 2. `download_inmet.py`: INMET annual archives (`portal.inmet.gov.br/uploads/dadoshistoricos/{year}.zip`) to
    `inmet/raw/{year}/`. The portal resets scripted connections from some networks; zips placed by hand in
    `inmet/zips/` are used as they are.

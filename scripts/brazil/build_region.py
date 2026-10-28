@@ -20,6 +20,10 @@ from shapely.geometry import box
 IBGE_URL = ('https://servicodados.ibge.gov.br/api/v3/malhas/estados/{uf}'
             '?formato=application/vnd.geo%2Bjson&periodo=2020&qualidade=maxima')
 BUFFER_DEG = 0.1  # mirrors northeastern_buffered
+DEFAULT_STATES = ['CE', 'RN', 'PB', 'PE']
+DEFAULT_BBOX = [-41.5, -9.5, -34.5, -2.5]
+# build() output for the defaults; IBGE times out from Colab, so the defaults also work offline
+BUNDLED = Path(__file__).resolve().parent / 'ne_brazil_buffered.geojson'
 
 log = logging.getLogger('build_region')
 
@@ -44,8 +48,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--data-root', required=True, type=Path)
     parser.add_argument('--years', nargs='*', type=int, help='unused; accepted for a uniform CLI')
-    parser.add_argument('--states', nargs='+', default=['CE', 'RN', 'PB', 'PE'])
-    parser.add_argument('--bbox', nargs=4, type=float, default=[-41.5, -9.5, -34.5, -2.5],
+    parser.add_argument('--states', nargs='+', default=DEFAULT_STATES)
+    parser.add_argument('--bbox', nargs=4, type=float, default=DEFAULT_BBOX,
                         metavar=('LON_MIN', 'LAT_MIN', 'LON_MAX', 'LAT_MAX'))
     parser.add_argument('--name', default='ne_brazil_buffered')
     args = parser.parse_args(argv)
@@ -58,8 +62,11 @@ def main(argv=None):
         try:
             region = build(args.states, args.bbox)
         except Exception as e:
-            log.error('could not build region: %s', e)
-            return 1
+            if args.states != DEFAULT_STATES or args.bbox != DEFAULT_BBOX:
+                log.error('could not build region from IBGE: %s', e)
+                return 1
+            log.warning('IBGE unreachable (%s); using the bundled %s', e, BUNDLED.name)
+            region = gpd.read_file(BUNDLED)
         if region.geometry.iloc[0].is_empty or not region.geometry.iloc[0].is_valid:
             log.error('region polygon is empty or invalid')
             return 1
