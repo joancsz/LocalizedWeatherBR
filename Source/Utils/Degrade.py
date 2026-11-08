@@ -22,6 +22,21 @@ def spread_stations(lons, lats, n, seed):
     return np.sort(idx)
 
 
+def eval_stations(lons, lats, n_eval):
+    """Fixed evaluation set of the E4 density sweep: n_eval spread stations, independent of the subsample seed."""
+    return spread_stations(lons, lats, n_eval, seed=0)
+
+
+def keep_fraction(lons, lats, fraction, n_eval, seed):
+    """Sorted indices of round(fraction * n) stations: the fixed evaluation set plus a seeded random draw of the rest."""
+    n = len(lons)
+    keep_eval = eval_stations(lons, lats, n_eval)
+    rest = np.setdiff1d(np.arange(n), keep_eval)
+    n_rest = max(int(round(fraction * n)) - len(keep_eval), 0)
+    drawn = np.random.default_rng(seed).choice(rest, n_rest, replace=False)
+    return np.sort(np.concatenate([keep_eval, drawn]))
+
+
 def inject_gaps(is_real, target_real_fraction, mean_gap_hours, seed):
     """Copy of is_real (stations, time) with contiguous outage blocks removed until the real fraction hits the target."""
     out = np.array(is_real, dtype=bool, copy=True)

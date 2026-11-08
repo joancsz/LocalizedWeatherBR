@@ -10,9 +10,13 @@ def region_file_name(lon_low, lon_up, lat_low, lat_up, shapefile_path=None):
     return file_name
 
 
-def filtered_file_name(file_name, control_ratio, keep_n=None, seed=None):
+def filtered_file_name(file_name, control_ratio, keep_n=None, seed=None, keep_fraction=None, eval_n=None):
     name = file_name + f'_filtered_{control_ratio}'
-    return name if keep_n is None else name + f'_keep{keep_n}_seed{seed}'
+    if keep_n is not None:
+        name += f'_keep{keep_n}_seed{seed}'
+    if keep_fraction is not None:
+        name += f'_frac{keep_fraction}_eval{eval_n}_seed{seed}'
+    return name
 
 
 def station_file(data_path, start_year, end_year, file_name):

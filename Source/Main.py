@@ -70,6 +70,8 @@ class Main:
         self.use_is_real_mask = args.use_is_real_mask
         self.station_keep_n = args.station_keep_n
         self.station_subsample_seed = args.station_subsample_seed
+        self.station_keep_fraction = args.station_keep_fraction
+        self.station_eval_n = args.station_eval_n
         self.gap_injection = args.gap_injection
         self.era5_coarsen_deg = args.era5_coarsen_deg
         self.n_passing = args.n_passing
@@ -117,7 +119,9 @@ class Main:
                                    shapefile_path=self.shapefile_path, data_path=self.data_path,
                                    start_year=self.start_year, end_year=self.end_year,
                                    station_keep_n=self.station_keep_n,
-                                   station_subsample_seed=self.station_subsample_seed)
+                                   station_subsample_seed=self.station_subsample_seed,
+                                   station_keep_fraction=self.station_keep_fraction,
+                                   station_eval_n=self.station_eval_n)
 
         self.madis_network = self.BuildMadisNetwork(meta_station, self.n_neighbors_m2m,
                                                     self.network_construction_method)

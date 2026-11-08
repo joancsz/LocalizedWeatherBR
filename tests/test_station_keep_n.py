@@ -60,3 +60,28 @@ def test_filename_has_n_and_seed_and_default_unchanged():
     b = Paths.filtered_file_name('stem', 0.9, keep_n=26, seed=1)
     assert len({base, a, b}) == 3
     assert '26' in a and a.startswith(base)
+
+
+def test_keep_fraction_always_contains_fixed_eval_set():
+    lons, lats = grid_with_cluster()
+    ev = set(Degrade.eval_stations(lons, lats, 6))
+    for frac in (1.0, 0.75, 0.5, 0.25):
+        for seed in (0, 1, 2):
+            idx = Degrade.keep_fraction(lons, lats, frac, 6, seed)
+            assert len(idx) == max(round(frac * len(lons)), 6) and len(set(idx)) == len(idx)
+            assert ev <= set(idx)
+            assert list(idx) == sorted(idx)                 # shapefile row order (I1)
+    assert set(Degrade.keep_fraction(lons, lats, 0.5, 6, 0)) != set(Degrade.keep_fraction(lons, lats, 0.5, 6, 1))
+    np.testing.assert_array_equal(Degrade.keep_fraction(lons, lats, 0.5, 6, 1), Degrade.keep_fraction(lons, lats, 0.5, 6, 1))
+
+
+def test_brazil_quarter_is_the_eval_set():
+    # 26 stations at 25% -> round(6.5) = 6 = the evaluation set itself
+    rng = np.random.default_rng(0)
+    lons, lats = rng.uniform(-41, -35, 26), rng.uniform(-9, -3, 26)
+    assert set(Degrade.keep_fraction(lons, lats, 0.25, 6, 2)) == set(Degrade.eval_stations(lons, lats, 6))
+
+
+def test_fraction_filename():
+    a = Paths.filtered_file_name('stem', 0.6, seed=1, keep_fraction=0.5, eval_n=6)
+    assert a == 'stem_filtered_0.6_frac0.5_eval6_seed1'

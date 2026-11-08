@@ -32,9 +32,7 @@ NAMES = ['u', 'v', 'temp', 'dewpoint']  # EnvVariables order, same names in the 
 log = logging.getLogger('baselines')
 
 
-def to_datetime(times):
-    # Times pickles hold int64 epoch time; pandas may write ns or us depending on version
-    return pd.to_datetime(times, unit='us' if np.abs(times).max() < 1e17 else 'ns')
+to_datetime = metrics.to_datetime
 
 
 def baseline_preds(times, lead_hrs, madis_ds, era5_ds, madis_vars_o):
@@ -57,8 +55,12 @@ def open_years(paths):
     return xr.concat([xr.open_dataset(p).load() for p in paths], dim='time', data_vars='minimal')
 
 
-def load_inputs(run_dir, years):
-    p = json.load(open(run_dir / 'params.json'))
+def run_meta(run_dir, **override):
+    """(params, MetaStation) of a run, built with the same constructor call as Main.Run so file names match.
+
+    override replaces params keys, e.g. madis_control_ratio=0.8 for another station set of the same region.
+    """
+    p = {**json.load(open(run_dir / 'params.json')), **override}
     data_path = Path(p['data_path'])
     if p['shapefile_path'] is None:
         lon_low, lon_up, lat_low, lat_up = p['coords']
@@ -66,11 +68,18 @@ def load_inputs(run_dir, years):
     else:
         shapefile = data_path / p['shapefile_path']
         lon_low, lat_low, lon_up, lat_up = gpd.read_file(shapefile).bounds.iloc[0].values
-    # same constructor call as Main.Run, so file names (including station_keep_n) match the run's
     meta = MetaStation(lat_low, lat_up, lon_low, lon_up, p['n_years'], p['madis_control_ratio'],
                        shapefile_path=shapefile, data_path=data_path, start_year=p['start_year'],
                        end_year=p['end_year'], station_keep_n=p.get('station_keep_n'),
-                       station_subsample_seed=p.get('station_subsample_seed', 0))
+                       station_subsample_seed=p.get('station_subsample_seed', 0),
+                       station_keep_fraction=p.get('station_keep_fraction'),
+                       station_eval_n=p.get('station_eval_n', 6))
+    return p, meta
+
+
+def load_inputs(run_dir, years):
+    p, meta = run_meta(run_dir)
+    data_path = Path(p['data_path'])
     tag = Paths.era5_grid_tag(p.get('era5_coarsen_deg', 0.25))
     madis = open_years([Paths.madis_processed_file(data_path, meta.start_year, meta.end_year, y,
                                                    meta.filtered_file_name) for y in years])
@@ -79,26 +88,47 @@ def load_inputs(run_dir, years):
     return madis, era5, p['lead_hrs']
 
 
+def load_forecasts(run_dir):
+    """Everything the evaluation scripts share: forecasts {'model', 'ERA5', 'persistence'} -> (samples, stations, vars),
+    plus targets, is_real, madis_vars_o, the Times pickle and the processed station dataset (for lon/lat)."""
+    preds, targets, is_real, madis_vars_o = metrics.load_run(run_dir)
+    times = pickle.load(open(run_dir / 'Times_CUSTOM_min.pkl', 'rb'))
+    years = sorted(set(to_datetime(times[:, -1]).year))
+    madis, era5, lead_hrs = load_inputs(run_dir, years)
+    assert madis.sizes['stations'] == era5.sizes['stations'] == preds.shape[1], 'station count mismatch with the run'
+    forecasts = {'model': preds, **baseline_preds(times, lead_hrs, madis, era5, madis_vars_o)}
+    return forecasts, targets, is_real, madis_vars_o, times, madis
+
+
+def score(forecasts, targets, is_real, madis_vars_o, times):
+    """Real-only metric row with day-bootstrap CIs per forecast."""
+    days = metrics.target_days(times)
+    rows = []
+    for name, p in forecasts.items():
+        row = metrics.summarize(p, targets, is_real, madis_vars_o, days=days)[1]
+        row['entries'] = name
+        rows.append(row)
+    return rows
+
+
+def write_rows(rows, path, **extra):
+    # CI tuples become <metric>_lo / <metric>_hi columns; extra adds constant columns (e.g. run settings)
+    flat = [{**extra, **{k2: v2 for k, v in r.items() for k2, v2 in
+                         (zip((k[:-3] + '_lo', k[:-3] + '_hi'), v) if k.endswith('_ci') else [(k, v)])}} for r in rows]
+    pd.DataFrame(flat).to_csv(path, index=False)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--run-dir', required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        preds, targets, is_real, madis_vars_o = metrics.load_run(args.run_dir)
-        times = pickle.load(open(args.run_dir / 'Times_CUSTOM_min.pkl', 'rb'))
-        years = sorted(set(to_datetime(times[:, -1]).year))
-        madis, era5, lead_hrs = load_inputs(args.run_dir, years)
+        forecasts, targets, is_real, madis_vars_o, times, _ = load_forecasts(args.run_dir)
     except FileNotFoundError as e:
         log.error('missing input: %s', e)
         return 1
-    assert madis.sizes['stations'] == era5.sizes['stations'] == preds.shape[1], 'station count mismatch with the run'
-
-    rows = []
-    for name, p in {'model': preds, **baseline_preds(times, lead_hrs, madis, era5, madis_vars_o)}.items():
-        row = metrics.summarize(p, targets, is_real, madis_vars_o)[1]  # real observations only
-        row['entries'] = name
-        rows.append(row)
-    pd.DataFrame(rows).to_csv(args.run_dir / 'baselines.csv', index=False)
+    rows = score(forecasts, targets, is_real, madis_vars_o, times)
+    write_rows(rows, args.run_dir / 'baselines.csv')
     sys.stdout.write(metrics.to_markdown(rows).replace('| entries |', '| forecast |') + '\n')
     return 0
 
