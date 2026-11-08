@@ -32,5 +32,9 @@ def era5_grid_tag(coarsen_deg):
     return '' if coarsen_deg == 0.25 else f'_c{round(coarsen_deg * 100):03d}'
 
 
+def era5_interpolated_file(data_path, n_neighbors_e2m, interpolation_name, year, filtered_file_name, grid_tag=''):
+    return Path(data_path) / 'ERA5' / 'Interpolated' /         f'era5interpolated_e2m_{n_neighbors_e2m}_{interpolation_name}_{year}_{filtered_file_name}{grid_tag}.nc'
+
+
 def era5_monthly_file(data_path, region, year, month):
     return Path(data_path) / 'ERA5' / region / f'surface_{year}_{month}.nc'

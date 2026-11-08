@@ -38,3 +38,10 @@ def test_explicit_split_validated():
         args(train_years=[2019, 2020], val_years=[2020], test_years=[2023])
     with pytest.raises(AssertionError):
         args(train_years=[2015], val_years=[2022], test_years=[2023])
+
+
+def test_interpolated_name_matches_zenodo_cache():
+    filtered = Paths.filtered_file_name(Paths.region_file_name(-80.53, -66.94, 38.92, 47.47,
+                                                               'Shapefiles/Regions/northeastern_buffered.shp'), 0.9)
+    assert Paths.era5_interpolated_file('d', 1, 'Nearest', 2019, filtered).name == \
+        f'era5interpolated_e2m_1_Nearest_2019_{filtered}.nc'

@@ -1,0 +1,20 @@
+# P4 NE Brazil, Transformer + ERA5 Nearest (PLAN_BRAZIL §5 with PLAN_UPDATE_v2: control ratio 0.6 -> 26 stations).
+# Unset keys take Source/run.py DEFAULTS. Enum keys use the integer values in Source/Settings/Settings.py.
+data_path: ${DATA_ROOT}/brazil
+output_saving_path: ModelOutputs/ne_brazil_vit
+shapefile_path: Shapefiles/Regions/ne_brazil_buffered.shp
+model_type: 2                   # ViT (Transformer)
+network_construction_method: 3  # FULLY_CONNECTED
+interpolation_type: 0           # Nearest; this run also builds the file scripts/eval/baselines.py reads
+n_neighbors_e2m: 1
+n_neighbors_h2m: 0              # no HRRR outside the US
+lead_hrs: 1
+epochs: 50
+madis_control_ratio: 0.6
+start_year: 2019
+end_year: 2023
+train_years: [2019, 2020, 2021]
+val_years: [2022]
+test_years: [2023]
+era5_region: NEBrazil
+use_is_real_mask: true          # required: at 0.6 many hours are filled

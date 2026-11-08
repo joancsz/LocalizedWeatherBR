@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import xarray as xr
 
+import Utils.Paths as Paths
 from Dataloader.ERA5 import ERA5
 from Network.NetworkUtils import search_k_neighbors
 from Settings.Settings import InterpolationType
@@ -29,7 +30,8 @@ class ERA5Interpolated(ERA5):
         return self.make_interpolated()
 
     def GetInterpolatedFilePath(self, n_neighbors_e2m):
-        return self.data_path / 'ERA5' / 'Interpolated' / f'era5interpolated_e2m_{n_neighbors_e2m}_{self.interpolation_type.name}_{self.year}_{self.filtered_file_name}{self.grid_tag}{self.extension}'
+        return Paths.era5_interpolated_file(self.data_path, n_neighbors_e2m, self.interpolation_type.name, self.year,
+                                            self.filtered_file_name, self.grid_tag)
 
     def make_interpolated(self):
         if self.interpolated_file_path.exists():
