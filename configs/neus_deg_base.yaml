@@ -1,0 +1,21 @@
+# PLAN_UPDATE_v2 §2.5 degraded NE-US: shared settings of every run. notebooks/03_degraded_neus.ipynb adds the
+# per-run degradation keys (station_keep_n, gap_injection, era5_coarsen_deg) and output_saving_path.
+# Same as neus_vit_20.yaml except use_is_real_mask, which every degraded run needs (injected gaps are filled values).
+data_path: ${DATA_ROOT}/neus
+output_saving_path: ModelOutputs/neus_deg_base
+shapefile_path: Shapefiles/Regions/northeastern_buffered.shp
+model_type: 2                   # ViT (Transformer)
+network_construction_method: 3  # FULLY_CONNECTED
+interpolation_type: 0           # Nearest
+n_neighbors_e2m: 1
+n_neighbors_h2m: 0
+lead_hrs: 1
+epochs: 20
+madis_control_ratio: 0.9
+start_year: 2019
+end_year: 2023
+train_years: [2019, 2020, 2021]
+val_years: [2022]
+test_years: [2023]
+era5_region: World
+use_is_real_mask: true

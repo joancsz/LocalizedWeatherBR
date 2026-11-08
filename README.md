@@ -19,6 +19,7 @@ starting Jupyter. `DATA_ROOT` holds one folder per dataset: `neus/` and `brazil/
 |---|---|---|
 | `notebooks/01_neus_reproduction.ipynb` | 1–2 | Zenodo NE-US data, unit tests, 20-epoch Transformer and GNN runs, test metrics |
 | `notebooks/02_brazil_data.ipynb` | 3 | region shapefile, INMET download + conversion, ERA5 download, validation report |
+| `notebooks/03_degraded_neus.ipynb` | v2 §2.5 | NE-US with 26 stations, Brazil-like outages and/or coarse ERA5 (7 Transformer runs), metrics table |
 
 Results and decisions are logged in `docs/repro_log.md`.
 
