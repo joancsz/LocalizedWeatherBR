@@ -46,6 +46,10 @@ if __name__ == '__main__':
     parser.add_argument('--test_years', default=None, type=int, nargs='+')
     parser.add_argument('--era5_region', default='World', type=str)
     parser.add_argument('--use_is_real_mask', default=0, type=int)
+    parser.add_argument('--station_keep_n', default=None, type=int)
+    parser.add_argument('--station_subsample_seed', default=0, type=int)
+    parser.add_argument('--gap_injection', default=None, type=json.loads)  # '{"target_real_fraction": 0.8, ...}'
+    parser.add_argument('--era5_coarsen_deg', default=0.25, type=float)
     parser.add_argument('--interpolation_type', default=InterpolationType.none.value, type=int)
 
     # Model Hyperparameters

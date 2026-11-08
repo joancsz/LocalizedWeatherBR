@@ -10,11 +10,12 @@ import xarray as xr
 from shapely import points
 
 import Utils.Paths as Paths
+from Utils.Degrade import spread_stations
 
 
 class MetaStation(object):
     def __init__(self, lat_low, lat_up, lon_low, lon_up, n_years=5, control_ratio=0.9, shapefile_path=None,
-                 data_path=Path(''), start_year=None, end_year=2023):
+                 data_path=Path(''), start_year=None, end_year=2023, station_keep_n=None, station_subsample_seed=0):
 
         self.lat_low = lat_low
         self.lat_up = lat_up
@@ -47,6 +48,21 @@ class MetaStation(object):
         elif os.path.exists(self.all_station_file):
             print(f'Station files does not exist at {self.all_station_file}')
             self.stations = self.generate_filtered_station_table(self.stations_raw)
+
+        # Madis builds the processed file of self.stations by selecting from the source file and stations
+        self.source_file_name, self.stations_source = self.file_name, self.stations_raw
+        if station_keep_n is not None:
+            self.source_file_name, self.stations_source = self.filtered_file_name, self.stations
+            self.filtered_file_name = Paths.filtered_file_name(self.file_name, self.control_ratio, station_keep_n,
+                                                               station_subsample_seed)
+            self.station_file = Paths.station_file(data_path, self.start_year, self.end_year, self.filtered_file_name)
+            if os.path.exists(self.station_file):
+                self.stations = gpd.read_file(self.station_file)
+            else:
+                keep = spread_stations(self.stations.geometry.x.values, self.stations.geometry.y.values,
+                                       station_keep_n, station_subsample_seed)
+                self.stations = self.stations.iloc[keep]
+                self.stations.to_file(self.station_file, index=False)
 
     def generate_station_table(self):
         print('Generating station table')

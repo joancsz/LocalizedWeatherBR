@@ -15,7 +15,7 @@ from Normalization.Normalizers import MinMaxNormalizer
 
 class MixData(Dataset):
     def __init__(self, year, back_hrs, lead_hours, meta_station, madis_network, madis_vars,
-                 external_network, external_vars, external_data_object, data_path=Path('')):
+                 external_network, external_vars, external_data_object, data_path=Path(''), gap_injection=None):
 
         self.year = year
         self.back_hrs = back_hrs
@@ -33,7 +33,7 @@ class MixData(Dataset):
                         until=datetime.strptime(f'{year + 1}-01-01', '%Y-%m-%d')))[0:-1])).to_xarray()
 
         self.stations = meta_station.stations
-        stations_raw = meta_station.stations_raw
+        stations_raw = meta_station.stations_source
         self.stat_coords = list(self.stations['geometry'])
         stat_coords_raw = list(stations_raw['geometry'])
         self.stat_lons = np.array([i.x for i in self.stat_coords])
@@ -41,9 +41,9 @@ class MixData(Dataset):
         self.n_stations = len(self.stat_coords)
 
         self.Madis = Madis(self.time_line, stat_coords_raw, self.stat_coords, meta_station.lat_low, meta_station.lat_up,
-                           meta_station.lon_low, meta_station.lon_up, meta_station.file_name,
+                           meta_station.lon_low, meta_station.lon_up, meta_station.source_file_name,
                            meta_station.filtered_file_name, meta_station.start_year, meta_station.end_year,
-                           data_path=data_path)
+                           data_path=data_path, gap_injection=gap_injection)
         self.madis_data = self.Madis.ds_xr
 
         self.madis_mins_dict = dict()

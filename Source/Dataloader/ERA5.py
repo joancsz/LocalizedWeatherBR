@@ -6,12 +6,13 @@ import torch
 import xarray as xr
 
 import Utils.Paths as Paths
+from Utils.Degrade import coarsen_era5
 from Network.NetworkUtils import search_k_neighbors
 
 
 class ERA5(object):
     def __init__(self, year, madis_network, meta_station, n_neighbors_e2m, region='World', zarr=False,
-                 data_path=Path('')):
+                 data_path=Path(''), coarsen_deg=0.25):
 
         self.madis_network = madis_network
 
@@ -32,10 +33,14 @@ class ERA5(object):
         self.year = year
         self.data_path = data_path
         self.n_neighbors_e2m = n_neighbors_e2m
+        self.coarsen_factor = round(coarsen_deg / 0.25)
+        assert np.isclose(self.coarsen_factor * 0.25, coarsen_deg), 'era5_coarsen_deg must be a multiple of 0.25'
+        self.grid_tag = Paths.era5_grid_tag(coarsen_deg)
 
-        self.node_file_path = self.data_path / f'ERA5/Processed/era5_{year}_e2m_{n_neighbors_e2m}_{meta_station.filtered_file_name}{self.extension}'
-        self.region_file_path = self.data_path / 'ERA5' / 'Processed' / (
-                f'era5_{self.year}_{self.lon_low:.0f}_{self.lon_up:.0f}_{self.lat_low:.0f}_{self.lat_up:.0f}' + self.extension)
+        self.node_file_path = self.data_path / f'ERA5/Processed/era5_{year}_e2m_{n_neighbors_e2m}_{meta_station.filtered_file_name}{self.grid_tag}{self.extension}'
+        region_stem = f'era5_{self.year}_{self.lon_low:.0f}_{self.lon_up:.0f}_{self.lat_low:.0f}_{self.lat_up:.0f}'
+        self.base_region_file_path = self.data_path / 'ERA5' / 'Processed' / (region_stem + self.extension)
+        self.region_file_path = self.data_path / 'ERA5' / 'Processed' / (region_stem + self.grid_tag + self.extension)
 
         self.data = self.get_ERA5(region, madis_network, n_neighbors_e2m)
 
@@ -72,6 +77,13 @@ class ERA5(object):
 
         if region_file_path.exists():
             return xr.open_mfdataset(region_file_path, engine=self.engine)
+
+        if region_file_path != self.base_region_file_path:
+            # coarsen the native-grid region file (built from monthly files if needed) before any interpolation
+            data = coarsen_era5(self.load_era5_region(region, self.base_region_file_path), self.coarsen_factor)
+            region_file_path.parent.mkdir(exist_ok=True, parents=True)
+            data.to_netcdf(region_file_path)
+            return data
 
         data_list = []
 

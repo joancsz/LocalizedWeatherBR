@@ -68,6 +68,10 @@ class Main:
         self.test_years = args.test_years
         self.era5_region = args.era5_region
         self.use_is_real_mask = args.use_is_real_mask
+        self.station_keep_n = args.station_keep_n
+        self.station_subsample_seed = args.station_subsample_seed
+        self.gap_injection = args.gap_injection
+        self.era5_coarsen_deg = args.era5_coarsen_deg
         self.n_passing = args.n_passing
         self.n_neighbors_m2m = args.n_neighbors_m2m
         self.network_construction_method = args.network_construction_method
@@ -111,7 +115,9 @@ class Main:
         meta_station = MetaStation(self.lat_low, self.lat_up, self.lon_low, self.lon_up, self.n_years,
                                    self.madis_control_ratio,
                                    shapefile_path=self.shapefile_path, data_path=self.data_path,
-                                   start_year=self.start_year, end_year=self.end_year)
+                                   start_year=self.start_year, end_year=self.end_year,
+                                   station_keep_n=self.station_keep_n,
+                                   station_subsample_seed=self.station_subsample_seed)
 
         self.madis_network = self.BuildMadisNetwork(meta_station, self.n_neighbors_m2m,
                                                     self.network_construction_method)
@@ -258,7 +264,7 @@ class Main:
                     madis_vars, meta_station, years):
         Data_List = [MixData(year, back_hrs, lead_hrs, meta_station, self.madis_network, madis_vars, external_network,
                              external_vars, external_data_objects[year] if external_data_objects is not None else None,
-                             data_path=data_path) for year in years]
+                             data_path=data_path, gap_injection=self.gap_injection) for year in years]
         return Data_List
 
     def GetEvaluateModel(self, device, external_norm_dict, external_vars, lead_hrs, loaders, loss_function,
@@ -304,12 +310,14 @@ class Main:
                 if interpolation_type == InterpolationType.none:
                     external_data_objects[year] = era5_loader(year,
                                                               madis_network, meta_station, n_neighbors_e2m,
-                                                              region=self.era5_region, data_path=data_path)
+                                                              region=self.era5_region, data_path=data_path,
+                                                              coarsen_deg=self.era5_coarsen_deg)
                 else:
                     external_data_objects[year] = era5_loader(year,
                                                               madis_network, meta_station, n_neighbors_e2m,
                                                               interpolation_type, region=self.era5_region,
-                                                              data_path=data_path)
+                                                              data_path=data_path,
+                                                              coarsen_deg=self.era5_coarsen_deg)
 
             if interpolation_type == InterpolationType.none:
                 external_network = self.BuildERA5Network(external_data_objects[years[0]].data, madis_network,

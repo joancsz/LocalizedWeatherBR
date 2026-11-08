@@ -14,10 +14,10 @@ from Settings.Settings import InterpolationType
 class ERA5Interpolated(ERA5):
     def __init__(self, year, madis_network, meta_station, n_neighbors_e2m, interpolation_type=InterpolationType.none,
                  region='World', zarr=False,
-                 data_path=Path('')):
+                 data_path=Path(''), coarsen_deg=0.25):
         self.interpolation_type = interpolation_type
         self.filtered_file_name = meta_station.filtered_file_name
-        ERA5.__init__(self, year, madis_network, meta_station, n_neighbors_e2m, region, zarr, data_path)
+        ERA5.__init__(self, year, madis_network, meta_station, n_neighbors_e2m, region, zarr, data_path, coarsen_deg)
 
     def get_ERA5(self, region, madis_network, n_neighbors_e2m):
         self.interpolated_file_path = self.GetInterpolatedFilePath(n_neighbors_e2m)
@@ -29,7 +29,7 @@ class ERA5Interpolated(ERA5):
         return self.make_interpolated()
 
     def GetInterpolatedFilePath(self, n_neighbors_e2m):
-        return self.data_path / 'ERA5' / 'Interpolated' / f'era5interpolated_e2m_{n_neighbors_e2m}_{self.interpolation_type.name}_{self.year}_{self.filtered_file_name}{self.extension}'
+        return self.data_path / 'ERA5' / 'Interpolated' / f'era5interpolated_e2m_{n_neighbors_e2m}_{self.interpolation_type.name}_{self.year}_{self.filtered_file_name}{self.grid_tag}{self.extension}'
 
     def make_interpolated(self):
         if self.interpolated_file_path.exists():

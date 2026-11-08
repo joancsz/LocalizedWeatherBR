@@ -10,12 +10,13 @@ import xarray as xr
 from shapely import points
 
 import Utils.Paths as Paths
+from Utils import Degrade
 
 
 class Madis(object):
     def __init__(self, times, coords_raw, coords, lat_low, lat_up, lon_low, lon_up, file_name, filtered_file_name,
                  start_year=2019, end_year=2023,
-                 data_path=Path('')):
+                 data_path=Path(''), gap_injection=None):
 
         # start_year / end_year come from meta station
 
@@ -55,6 +56,22 @@ class Madis(object):
             self.ds_xr = self.createFile(rawdata)
 
         self.ds_xr = self.ds_xr.load()
+
+        # in memory only: the processed files on disk stay untouched
+        if gap_injection is not None:
+            self.InjectGaps(**gap_injection)
+
+    def InjectGaps(self, target_real_fraction, mean_gap_hours, seed):
+        # outages take the whole station down, so one mask (drawn on u) removes the hours from every variable
+        ds = self.ds_xr
+        kept = Degrade.inject_gaps(ds.u_is_real.values, target_real_fraction, mean_gap_hours, [seed, int(self.years[0])])
+        removed = ds.u_is_real.values & ~kept
+        for var in ['u', 'v', 'temp', 'dewpoint', 'solar_radiation']:
+            dims = ds[var].dims
+            assert dims == ('stations', 'time'), dims
+            is_real = ds[f'{var}_is_real'].values & ~removed
+            ds[f'{var}_is_real'] = (dims, is_real)
+            ds[var] = (dims, Degrade.refill(ds[var].values, is_real))
 
     def createRawFile(self):
         if (os.path.exists(self.madis_raw_ds_path)):
