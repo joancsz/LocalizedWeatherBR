@@ -87,10 +87,10 @@ Resultado esperado: tabela de erro em que a última linha (tudo degradado) pode 
 
 ## 4. Ordem de trabalho
 
-- [ ] Ler `repro_log.md` e o estado do fork; listar o que já existe
-- [ ] Ajustar config Brasil para 0,6 e confirmar 26 estações
-- [ ] `baselines.py` (Brasil e NE-EUA)
-- [ ] E3 `diurnal_analysis.py` (perguntar o limiar de costeira)
-- [ ] Extra: `station_keep_n`, injeção de falhas, `era5_coarsen_deg` + testes → 5 rodadas
-- [ ] E4 densidade e filtro (perguntar o desenho do conjunto de avaliação)
-- [ ] Documentação e tabelas
+- [x] Ler `repro_log.md` e o estado do fork; listar o que já existe
+- [x] Ajustar config Brasil para 0,6 e confirmar 26 estações (`configs/ne_brazil_{vit,gnn}.yaml`)
+- [x] `baselines.py` (Brasil e NE-EUA)
+- [x] E3 `diurnal_analysis.py` (limiar decidido: 20 km, Natural Earth 10 m)
+- [x] Extra: `station_keep_n`, injeção de falhas, `era5_coarsen_deg` + testes → rodadas no notebook 03 (+ `sparse_gaps`, `coarse_050`)
+- [x] E4 densidade e filtro (desenho decidido: 6 estações fixas mantidas em toda rede; filtro avaliado nas estações de 0,8) — código e notebook 04; rodadas pendentes
+- [ ] Documentação e tabelas (`make_tables.py` e esqueletos em `docs/` prontos; faltam os números)

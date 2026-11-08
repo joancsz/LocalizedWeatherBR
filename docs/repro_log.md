@@ -56,8 +56,9 @@ and trains for 200 epochs; the gap is recorded, not tuned away.
 
 Transformer run (2026-10-26, Colab A100, torch 2.14.1): train 1.24706 → 0.32974, best val 0.33702 at epoch 19 (the
 checkpoint used for test); val was still falling, so 20 epochs is not converged. All-entries metrics: 0.389 / 0.966 / 0.932.
-The 1 h lead is far easier than the paper's average over leads, which is why it beats the paper; only the
-multi-lead sweep (E5) gives a like-for-like comparison. Real-only Td RMSE is *higher* than all-entries (0.962 vs 0.932),
+The 1 h lead is far easier than the paper's average over leads, which is why it beats the paper. The lead sweep (E5)
+was dropped in `PLAN_UPDATE_v2.md`, so this comparison with the paper stays indicative. With l = 1 h and ERA5 at the
+target hour this is reanalysis downscaling, like the paper's ERA5 / HRRR-A results (only HRRR-F is a forecast). Real-only Td RMSE is *higher* than all-entries (0.962 vs 0.932),
 because filled values are forward-filled and therefore easy to predict: evaluate on real observations only.
 No torch seed is set in `Main`, so the Colab epoch-1 loss (1.24706) differs from the seeded local runs (1.26501).
 

@@ -20,8 +20,9 @@ starting Jupyter. `DATA_ROOT` holds one folder per dataset: `neus/` and `brazil/
 | `notebooks/01_neus_reproduction.ipynb` | 1–2 | Zenodo NE-US data, unit tests, 20-epoch Transformer and GNN runs, test metrics |
 | `notebooks/02_brazil_data.ipynb` | 3 | region shapefile, INMET download + conversion, ERA5 download, validation report |
 | `notebooks/03_degraded_neus.ipynb` | v2 §2.5 | NE-US with 26 stations, Brazil-like outages and/or coarse ERA5 (7 Transformer runs), metrics table |
+| `notebooks/04_brazil_experiments.ipynb` | 4–5 | Brazil Transformer and GNN (E2 with baselines), sea-breeze diurnal analysis (E3), station density and availability filter (E4), LaTeX tables |
 
-Results and decisions are logged in `docs/repro_log.md`.
+Results and decisions are logged in `docs/repro_log.md`, `docs/results_brazil.md` and `docs/results_degraded_neus.md`.
 
 ## Changes from upstream
 
@@ -34,8 +35,13 @@ Results and decisions are logged in `docs/repro_log.md`.
 - **Fixes**: ERA5 files without `expver`/`number` load; the GNN + interpolated ERA5 combination (which crashed
   upstream) is rejected up front; k-NN uses `torch.cdist` so `pyg-lib` is not needed.
 - **File names** come from one place, `Source/Utils/Paths.py`, shared by `Source/` and the scripts.
-- **Scripts**: `scripts/neus/` (Zenodo download), `scripts/brazil/` (Brazil data pipeline),
-  `scripts/eval/metrics.py` (test metrics in physical units, real observations only).
+- **Degradation options** (NE-US experiment and E4): `station_keep_n` (spread subsample), `station_keep_fraction`
+  (subsample that always keeps `station_eval_n` fixed evaluation stations), `gap_injection` (synthetic station
+  outages, in memory) and `era5_coarsen_deg` (block-mean ERA5; cache files get a `_c050`/`_c100` suffix).
+- **Scripts**: `scripts/neus/` (Zenodo download), `scripts/brazil/` (Brazil data pipeline), `scripts/eval/`:
+  `metrics.py` (test metrics in physical units, real observations only, 95% day-bootstrap intervals),
+  `baselines.py` (ERA5 nearest and persistence on the run's test samples), `diurnal_analysis.py` (E3),
+  `station_density.py` (E4 scoring on a shared station set), `make_tables.py` (LaTeX tables).
 - Pinned `requirements.txt`; tests in `tests/` (`pytest tests/`).
 
 ## Brazil data pipeline (`scripts/brazil/`)
