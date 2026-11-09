@@ -7,24 +7,27 @@ Reads (run names as in notebooks 03 and 04; a table whose inputs are missing is 
   E3     brazil/ModelOutputs/ne_brazil_vit/diurnal/wind_error.csv
   E4     brazil/ModelOutputs/{ne_brazil_vit,ne_brazil_e4_frac*}/eval_fixed.csv
          brazil/ModelOutputs/{ne_brazil_vit,ne_brazil_e4_ratio*}/eval_ratio0.8.csv
-  extra  neus/ModelOutputs/neus_deg_*/ test pickles (model only)
+  leads  brazil/ModelOutputs/ne_brazil_vit*/baselines.csv, neus/ModelOutputs/neus_deg_base*/baselines.csv
+  extra  neus/ModelOutputs/neus_deg_*/ test pickles (model only), one table per lead, scored with common_set.py
+Leads come from each run's params.json.
 Every number is on real observations only; brackets are 95% day-bootstrap intervals.
 """
 
 import argparse
+import json
 import logging
-import pickle
+import re
 import sys
 from pathlib import Path
 
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import metrics
+import common_set
 
 METRICS = [('wind', 'wind (m/s)'), ('t_rmse', 'T RMSE (K)'), ('td_rmse', 'Td RMSE (K)')]
-DEGRADED = ['base', 'sparse', 'gaps', 'coarse_050', 'coarse_100', 'sparse_gaps', 'all']  # notebook 03 run names
-CAVEAT = 'With $l = 1$ h and the grid at the target hour, these are reanalysis downscaling results.'
+DEGRADED = ['base', 'sparse', 'gaps', 'coarse_050', 'coarse_100', 'sparse_gaps', 'all']  # notebook 03 runs; '_l<h>' = lead h
+CAVEAT = 'With the grid at the target hour, these are reanalysis downscaling results.'
 
 log = logging.getLogger('make_tables')
 
@@ -44,7 +47,11 @@ def booktabs(header, rows, caption, label, align=None):
     return '\n'.join(lines) + '\n'
 
 
-def e2_table(vit, gnn=None):
+def lead_of(run_dir):
+    return int(json.load(open(run_dir / 'params.json'))['lead_hrs'])
+
+
+def e2_table(vit, gnn=None, lead=1):
     """vit / gnn: baselines.csv frames (rows model, ERA5, persistence)."""
     by = lambda df, e: df.set_index('entries').loc[e]
     rows = [('Transformer + ERA5', by(vit, 'model'))]
@@ -52,7 +59,7 @@ def e2_table(vit, gnn=None):
         rows.append(('GNN + ERA5', by(gnn, 'model')))
     rows += [('ERA5 nearest', by(vit, 'ERA5')), ('Persistence', by(vit, 'persistence'))]
     return booktabs(['Forecast'] + [h for _, h in METRICS], [[n] + [ci(r, m) for m, _ in METRICS] for n, r in rows],
-                    f'E2: NE Brazil test year, lead 1 h. {CAVEAT}', 'tab:e2')
+                    f'E2: NE Brazil test year, lead {lead} h. {CAVEAT}', 'tab:e2')
 
 
 def e3_table(err, counts):
@@ -92,11 +99,26 @@ def e4_filter_table(evals):
                     f'E4: availability filter, scored on the {n_eval} stations kept at ratio 0.8.', 'tab:e4filter')
 
 
-def degraded_table(results):
-    """results: {run: summarize row} for the notebook 03 runs present."""
+def degraded_table(results, lead=1, n_stations=None):
+    """results: {run: summarize row} for the notebook 03 runs of one lead, scored on common stations and hours."""
     rows = [[n.replace('_', '\\_')] + [ci(r, m) for m, _ in METRICS] for n, r in results.items()]
+    on = f', every run scored on the same {n_stations} stations and real hours' if n_stations else ''
     return booktabs(['Run'] + [h for _, h in METRICS], rows,
-                    f'Degraded NE-US (Transformer + ERA5, lead 1 h). {CAVEAT}', 'tab:degraded')
+                    f'Degraded NE-US (Transformer + ERA5, lead {lead} h{on}). {CAVEAT}', f'tab:degraded_l{lead}')
+
+
+def lead_table(frames, region):
+    """frames: {lead: baselines.csv frame}. Model, ERA5 and persistence per lead."""
+    rows = [[lead, r.entries] + [ci(r, m) for m, _ in METRICS]
+            for lead in sorted(frames) for _, r in frames[lead].iterrows()]
+    return booktabs(['Lead (h)', 'Forecast'] + [h for _, h in METRICS], rows,
+                    f'{region}: Transformer + ERA5 and references by lead. {CAVEAT}',
+                    f'tab:leads_{region.lower().replace("-", "")}', 'rl' + 'r' * len(METRICS))
+
+
+def degraded_order(run_dir):
+    name = re.sub(r'_l\d+$', '', run_dir.name.removeprefix('neus_deg_'))
+    return DEGRADED.index(name) if name in DEGRADED else len(DEGRADED)
 
 
 def flat_ci(row):
@@ -111,7 +133,13 @@ def build(root):
 
     vit, gnn = read(br / 'ne_brazil_vit' / 'baselines.csv'), read(br / 'ne_brazil_gnn' / 'baselines.csv')
     if vit is not None:
-        tables['e2'] = e2_table(vit, gnn)
+        tables['e2'] = e2_table(vit, gnn, lead_of(br / 'ne_brazil_vit'))
+
+    for key, region, dirs in (('leads_brazil', 'Brazil', br.glob('ne_brazil_vit*')),
+                              ('leads_neus', 'NE-US', us.glob('neus_deg_base*'))):
+        frames = {lead_of(d): pd.read_csv(d / 'baselines.csv') for d in dirs if (d / 'baselines.csv').exists()}
+        if frames:
+            tables[key] = lead_table(frames, region)
 
     err = read(br / 'ne_brazil_vit' / 'diurnal' / 'wind_error.csv')
     st = read(br / 'ne_brazil_vit' / 'diurnal' / 'stations.csv')
@@ -125,14 +153,15 @@ def build(root):
         if frames:
             tables[key] = fn(pd.concat(frames, ignore_index=True))
 
-    results = {}
-    for name in DEGRADED:
-        d = us / f'neus_deg_{name}'
+    by_lead = {}
+    for d in sorted(us.glob('neus_deg_*'), key=degraded_order):
         if (d / 'Preds_CUSTOM_min.pkl').exists():
-            days = metrics.target_days(pickle.load(open(d / 'Times_CUSTOM_min.pkl', 'rb')))
-            results[name] = flat_ci(metrics.summarize(*metrics.load_run(d), days=days)[1])
-    if results:
-        tables['degraded'] = degraded_table(results)
+            by_lead.setdefault(lead_of(d), []).append(d)
+    for lead, dirs in sorted(by_lead.items()):
+        ref = min(dirs, key=lambda d: len(common_set.station_xy(d)))  # the sparsest network's stations
+        rows = common_set.common_scores(dirs, ref)
+        tables[f'degraded_l{lead}'] = degraded_table(
+            {n.removeprefix('neus_deg_'): flat_ci(r) for n, r in rows.items()}, lead, len(common_set.station_xy(ref)))
     return tables
 
 
@@ -144,12 +173,12 @@ def main(argv=None):
     out = args.out or args.data_root / 'tables'
     out.mkdir(parents=True, exist_ok=True)
     tables = build(args.data_root)
-    for name in ('e2', 'e3', 'e4_density', 'e4_filter', 'degraded'):
-        if name in tables:
-            (out / f'{name}.tex').write_text(tables[name], encoding='utf-8')
-            log.info('wrote %s', out / f'{name}.tex')
-        else:
+    for name in ('e2', 'e3', 'e4_density', 'e4_filter', 'leads_brazil', 'leads_neus', 'degraded_l1'):
+        if name not in tables:
             log.warning('%s: inputs missing, skipped', name)
+    for name, tex in tables.items():
+        (out / f'{name}.tex').write_text(tex, encoding='utf-8')
+        log.info('wrote %s', out / f'{name}.tex')
     return 0 if tables else 1
 
 

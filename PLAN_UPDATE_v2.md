@@ -13,7 +13,7 @@ Leia junto com `PLAN_BRAZIL.md`. **Este arquivo tem precedência** onde os dois 
 | Filtro de disponibilidade | Em aberto (default 0,8) | **Decidido: 0,6 → 26 estações** (0,8 dá só 15) |
 | E3 (brisa) | Diagnóstico secundário | **Resultado principal** |
 | E4 (densidade) | Retirar estações | Retirar estações **e** variar o filtro de disponibilidade |
-| E5 (antecedência) | Opcional | **Removido** (fica só l = 1 h) |
+| E5 (antecedência) | Opcional | **Reduzido** (2026-11-09): l = 6 h é o principal; varredura {1, 6, 24, 48} h só com Transformer (com l = 1 h o modelo empata com a persistência) |
 | Experimento extra | — | **Novo: NE-EUA degradado** (§3) |
 | Variáveis de energia (vento a 100 m etc.) | Mencionadas | **Fora do escopo** |
 | Ressalva "downscaling" | Só do modelo Brasil | Vale também para os resultados ERA5/HRRR-A do artigo; documentar assim |
@@ -93,4 +93,5 @@ Resultado esperado: tabela de erro em que a última linha (tudo degradado) pode 
 - [x] E3 `diurnal_analysis.py` (limiar decidido: 20 km, Natural Earth 10 m)
 - [x] Extra: `station_keep_n`, injeção de falhas, `era5_coarsen_deg` + testes → rodadas no notebook 03 (+ `sparse_gaps`, `coarse_050`)
 - [x] E4 densidade e filtro (desenho decidido: 6 estações fixas mantidas em toda rede; filtro avaliado nas estações de 0,8) — código e notebook 04; rodadas pendentes
+- [x] Lead 6 h como principal + varredura {1, 6, 24, 48} h (notebooks 03 e 04, `common_set.py`, tabelas `leads_*`, `degraded_l*`)
 - [ ] Documentação e tabelas (`make_tables.py` e esqueletos em `docs/` prontos; faltam os números)

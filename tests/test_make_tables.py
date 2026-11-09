@@ -28,3 +28,12 @@ def test_ci_cell_and_escape():
     assert make_tables.ci(r, 'wind') == r'0.500 {\scriptsize[0.450, 0.550]}'
     assert make_tables.ci(r, 't_rmse') == '1.000'
     assert r'sparse\_gaps' in make_tables.degraded_table({'sparse_gaps': r.to_dict() | {'td_rmse': 1.0}})
+
+
+def test_lead_table_rows_by_lead():
+    df = lambda w: pd.DataFrame([dict(entries='model', wind=w, t_rmse=1.0, td_rmse=1.0),
+                                 dict(entries='persistence', wind=2 * w, t_rmse=1.0, td_rmse=1.0)])
+    tex = make_tables.lead_table({6: df(0.6), 1: df(0.4)}, 'NE-US')
+    assert tex.index('1 & model & 0.400') < tex.index('1 & persistence & 0.800') < tex.index('6 & model & 0.600')
+    assert 'tab:leads_neus' in tex
+    assert 'lead 6 h' in make_tables.degraded_table({'base': df(0.6).iloc[0].to_dict()}, 6, 26)
