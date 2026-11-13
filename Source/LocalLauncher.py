@@ -14,6 +14,8 @@ class AttrDict(dict):
 
 if __name__ == '__main__':
     # Settings now live in configs/*.yaml; see Source/run.py
+    import os
     import run
 
+    os.environ.setdefault('DATA_ROOT', str(Path(__file__).parent.parent / 'data'))
     run.main(sys.argv[1:] or ['--config', str(Path(__file__).parent.parent / 'configs' / 'neus_repro.yaml')])
