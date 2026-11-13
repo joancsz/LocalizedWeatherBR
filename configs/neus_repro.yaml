@@ -1,6 +1,6 @@
 # P1/P2 NE-US reproduction on the Zenodo data (record 15346612).
 # Unset keys take Source/run.py DEFAULTS. Enum keys use the integer values in Source/Settings/Settings.py.
-data_path: data                 # Zenodo tree extracted at repo root; use ${DATA_ROOT}/neus elsewhere
+data_path: ${DATA_ROOT}/neus
 output_saving_path: ModelOutputs/neus_repro
 shapefile_path: Shapefiles/Regions/northeastern_buffered.shp
 model_type: 2                   # ViT (Transformer)
