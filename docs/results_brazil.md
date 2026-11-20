@@ -39,12 +39,34 @@ Checked on the test pickles (same samples, targets and real mask as the Transfor
   hour (1.24–1.56 K vs 0.71–1.25 K). Dropping the worst station (26) only moves 1.39 to 1.34 K.
 - **Shared outlier tail.** 1724 real T entries have |error| > 5 K, 483 of them at station 26. The Transformer misses
   the same entries by about the same amount, so these look like bad observations rather than a GNN failure. Station
-  26 has T RMSE 2.25 K (Transformer) and 2.81 K (ERA5) and is worth an INMET quality check. Without those entries the
-  GNN T RMSE is 1.16 K.
+  26 has T RMSE 2.25 K (Transformer) and 2.81 K (ERA5); see the station check below. Without those entries the GNN
+  T RMSE is 1.16 K.
 - **Worst months: December (2.11 K) and March (1.73 K).** 4% of the GNN's squared T error falls on 2023-12-23 alone.
 
 Reading: the GNN gap is mostly training budget, not a property of the Brazil data. A longer GNN run (100 epochs) would
-settle it. Until then, report the Transformer as the main model.
+settle it: notebook 04 has the cell (`ne_brazil_gnn_e100`, to run), and `make_tables.py` adds it to `e2.tex` as its
+own row. Until then, report the Transformer as the main model.
+
+### Station check (stations 26 and 14)
+
+`scripts/eval/station_check.py --run-dir ne_brazil_vit --stations 26 14` (plots in `ne_brazil_vit/station_check/`),
+plus the 2019–2023 processed files against ERA5. Both are observation problems, not model failures.
+
+- **26, A448 Curaçá (370 m): suspect temperature sensor, 2023-01 to 2023-04.** In those months the observed daily
+  maximum runs up to ~5 K above ERA5 and the model; from May on all three agree. The anomaly is bracketed by two
+  station outages (62 h from 2022-12-29, 106 h from 2023-04-29), which look like maintenance visits. Monthly mean
+  obs−ERA5 Tmax is +0.5 to +1.3 K in Jan–Apr 2023 against −1.1 to +0.2 K in every month of 2019–2022, while the other
+  25 stations stay at their usual +0.2 to +0.5 K. No stuck values or isolated spikes, so the INMET QC does not catch it.
+- **14, A332 Morada Nova (93 m): wind vane offset changed between training and test.** Its mean wind direction
+  differs from ERA5 by −50° to −100° in 2019–mid-2022 (the training years) but only −15° to −30° in 2023. Neighbouring
+  stations stay within about ±20° throughout (quarterly offset sd: 32° at station 14, ≤ 15° at 22 of the 26 stations).
+  Wind speed is fine (mean 3.0 m/s observed). The model learned the training-years offset and applies it in 2023,
+  hence its wind error of 2.48 m/s at a station where ERA5 has 1.97. Station 12 has an even less stable offset
+  (sd 70°) but the model still beats ERA5 there (1.33 vs 3.62 m/s).
+
+Neither station is dropped from the headline numbers: they are real INMET data and both models face them. Report them
+as data-quality caveats. Without station 26, T RMSE drops from 0.991 to 0.913 K (Transformer) and from 1.393 to
+1.337 K (GNN); the ranking and the gap between the models do not change.
 
 ## E3: sea breeze (main result)
 
@@ -75,7 +97,8 @@ coastal station:
 | 17 (only added at 30 km) | 27.3 | 1.02 | 2.05 | 2.78 |
 
 Network-wide, the model beats ERA5 at 25 of 26 stations and persistence at 25 of 26. Station 14 is the exception for
-both (model 2.48, ERA5 1.97, persistence 3.06 m/s). Widening "coastal" to 30 km changes nothing qualitatively.
+both (model 2.48, ERA5 1.97, persistence 3.06 m/s); its wind vane offset changed between training and test years
+(station check above). Widening "coastal" to 30 km changes nothing qualitatively.
 
 **What the model corrects (`uv_cycle.png`, coastal mean u and v by local hour).** The model reproduces the observed
 mean cycle almost exactly. ERA5's error is mostly **magnitude, not timing**:

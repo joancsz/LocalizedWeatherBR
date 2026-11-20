@@ -51,12 +51,14 @@ def lead_of(run_dir):
     return int(json.load(open(run_dir / 'params.json'))['lead_hrs'])
 
 
-def e2_table(vit, gnn=None, lead=1):
-    """vit / gnn: baselines.csv frames (rows model, ERA5, persistence)."""
+def e2_table(vit, gnn=None, lead=1, gnn_long=None):
+    """vit / gnn / gnn_long (100-epoch GNN): baselines.csv frames (rows model, ERA5, persistence)."""
     by = lambda df, e: df.set_index('entries').loc[e]
     rows = [('Transformer + ERA5', by(vit, 'model'))]
     if gnn is not None:
         rows.append(('GNN + ERA5', by(gnn, 'model')))
+    if gnn_long is not None:
+        rows.append(('GNN + ERA5, 100 epochs', by(gnn_long, 'model')))
     rows += [('ERA5 nearest', by(vit, 'ERA5')), ('Persistence', by(vit, 'persistence'))]
     return booktabs(['Forecast'] + [h for _, h in METRICS], [[n] + [ci(r, m) for m, _ in METRICS] for n, r in rows],
                     f'E2: NE Brazil test year, lead {lead} h. {CAVEAT}', 'tab:e2')
@@ -133,7 +135,7 @@ def build(root):
 
     vit, gnn = read(br / 'ne_brazil_vit' / 'baselines.csv'), read(br / 'ne_brazil_gnn' / 'baselines.csv')
     if vit is not None:
-        tables['e2'] = e2_table(vit, gnn, lead_of(br / 'ne_brazil_vit'))
+        tables['e2'] = e2_table(vit, gnn, lead_of(br / 'ne_brazil_vit'), read(br / 'ne_brazil_gnn_e100' / 'baselines.csv'))
 
     for key, region, dirs in (('leads_brazil', 'Brazil', br.glob('ne_brazil_vit*')),
                               ('leads_neus', 'NE-US', us.glob('neus_deg_base*'))):

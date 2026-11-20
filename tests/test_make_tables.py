@@ -37,3 +37,10 @@ def test_lead_table_rows_by_lead():
     assert tex.index('1 & model & 0.400') < tex.index('1 & persistence & 0.800') < tex.index('6 & model & 0.600')
     assert 'tab:leads_neus' in tex
     assert 'lead 6 h' in make_tables.degraded_table({'base': df(0.6).iloc[0].to_dict()}, 6, 26)
+
+
+def test_e2_optional_long_gnn_row():
+    df = lambda w: pd.DataFrame([dict(entries=e, wind=w, t_rmse=1.0, td_rmse=1.0) for e in ('model', 'ERA5', 'persistence')])
+    assert '100 epochs' not in make_tables.e2_table(df(0.5), df(0.6), 6)
+    tex = make_tables.e2_table(df(0.5), df(0.6), 6, df(0.55))
+    assert tex.index('GNN + ERA5 &') < tex.index('GNN + ERA5, 100 epochs & 0.550') < tex.index('ERA5 nearest')
