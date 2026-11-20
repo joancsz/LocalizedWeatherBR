@@ -105,7 +105,7 @@ Density, on the 6 fixed stations; mean (sd) over seeds:
 
 | fraction | stations | seeds | wind (m/s) | T RMSE (K) | Td RMSE (K) |
 |---|---|---|---|---|---|
-| 1.00 | 26 | 1 | 1.318 | 0.867 | 1.123 |
+| 1.00 | 26 | 3 | 1.300 (0.017) | 0.868 (0.008) | 1.110 (0.014) |
 | 0.75 | 20 | 3 | 1.305 (0.013) | 0.856 (0.010) | 1.114 (0.027) |
 | 0.50 | 13 | 3 | 1.327 (0.004) | 0.863 (0.005) | 1.125 (0.032) |
 | 0.25 | 6 | 1 | 1.334 | 0.876 | 1.107 |
@@ -121,32 +121,14 @@ Filter, on the 15 stations kept at 0.8 (95% CI):
 | 0.8 | 15 | 1.079 [1.062, 1.095] | 1.053 [1.020, 1.083] | 1.337 [1.310, 1.362] |
 
 Reading:
-- **Density barely matters.** From 26 stations down to 6, wind error on the fixed stations moves by at most 0.03 m/s,
-  which is the size of the seed spread (sd up to 0.013) and of each run's CI (about ±0.016). T and Td do not move
-  beyond their spread. The degraded NE-US runs agree: thinning to 26 stations did not hurt there either.
+- **Density barely matters.** From 26 stations down to 6, wind error on the fixed stations rises monotonically but only
+  from 1.300 to 1.334 m/s (+2.6%), about twice the training-seed sd (0.017 at 1.0) and each run's CI (about ±0.016).
+  T and Td do not move beyond their spread. The degraded NE-US runs agree: thinning to 26 stations did not hurt there.
 - So the model gains little from neighbouring stations at this spacing (~123 km). Its skill comes from ERA5 plus the
   station's own history. This is consistent with E3, where the gain is a per-station bias and amplitude correction.
 - **The filter barely matters** either; 0.6 is at least as good as 0.8 on the stricter stations, which supports the 0.6
   choice (more stations, no cost in skill).
-- Seed spread: these runs seeded only NumPy (`np.random.seed(100)`), not torch, so the 0.75 / 0.5 sd includes training
-  noise as well as the station draw. The 1.0 row has one training run. Notebook 04 now has a cell that retrains it
-  with `train_seed` 1 and 2 (`ne_brazil_e4_frac1.0_tseed{1,2}`), so 1.0 also gets an sd (to run).
-
-## Lead sweep (Transformer only)
-
-From `ne_brazil_vit{,_l1,_l24,_l48}/baselines.csv` (table `leads_brazil.tex`).
-
-| lead (h) | model wind | ERA5 wind | persistence wind | model T RMSE | persistence T RMSE | model Td RMSE | persistence Td RMSE |
-|---|---|---|---|---|---|---|---|
-| 1 | **0.870** | 2.541 | 1.002 | **0.719** | 1.210 | **0.737** | 0.896 |
-| 6 | **1.057** | 2.541 | 1.860 | **0.991** | 4.841 | **1.224** | 2.567 |
-| 24 | **1.066** | 2.540 | 1.393 | **1.008** | 1.559 | **1.328** | 1.752 |
-| 48 | **1.088** | 2.540 | 1.542 | **1.035** | 1.768 | **1.403** | 2.030 |
-
-- The model wins at every lead. From 6 h to 48 h its error barely grows (wind +3%, T +4%), because ERA5 is taken at
-  the target hour at every lead. This is the downscaling caveat at the top in numbers: past 6 h the station history
-  adds little and the model leans on the target-hour reanalysis. ERA5 itself is lead-independent.
-- 6 h is the hardest lead for persistence (T 4.84 K: a quarter of the diurnal cycle); 24 h persistence ("same hour
-  yesterday") is much better, so the model's margin over persistence is largest at 6 h.
-- Unlike NE-US, at 1 h the model clearly beats persistence (wind 0.87 vs 1.00 m/s); Brazil's 10 m winds change more
-  hour to hour.
+- Seed spread: the 1.0 row is three trainings of the full network (`ne_brazil_vit`, NumPy seed 100 with torch
+  unseeded, and `ne_brazil_e4_frac1.0_tseed{1,2}` with `train_seed` 1 and 2). Its sd (wind 0.017) is pure training
+  noise, the same size as the 0.75 / 0.5 sd, which mixes training noise and the station draw. So most of the seed
+  spread is training noise, not which stations are kept.
