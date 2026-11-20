@@ -50,6 +50,18 @@ def test_wind_error_by_hour_groups_and_mask():
     assert df.loc[('coastal', 'persistence', 5), 'wind'] == 0.0
 
 
+def test_wind_error_by_station_masks():
+    targets = np.zeros((4, 2, 4))
+    model = targets.copy()
+    model[..., 0] = [[1.0, 2.0], [1.0, 2.0], [1.0, 9.0], [1.0, 9.0]]
+    is_real = np.ones_like(targets, bool)
+    is_real[2:, 1, 1] = False                               # station 1: last two v entries not real
+    fc = {'model': model, 'ERA5': targets, 'persistence': targets}
+    out = da.wind_error_by_station(fc, targets, is_real, [0, 1, 2, 3])
+    assert list(out['n']) == [4, 2]
+    np.testing.assert_allclose(out['model'], [1.0, 2.0])
+
+
 def test_uv_cycle_uses_same_entries():
     hours = np.tile(np.arange(24), 2)
     targets = np.zeros((48, 1, 4))

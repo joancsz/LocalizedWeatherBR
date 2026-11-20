@@ -40,6 +40,7 @@ DEFAULTS = dict(
     use_is_real_mask=False,
     station_keep_n=None,           # PLAN_UPDATE_v2 §2.5: degraded NE-US
     station_subsample_seed=0,
+    train_seed=100,                # numpy and torch seed for training (weights, batch order)
     station_keep_fraction=None,    # E4 density: keep this fraction, always including station_eval_n fixed stations
     station_eval_n=6,
     gap_injection=None,            # {target_real_fraction, mean_gap_hours, seed}

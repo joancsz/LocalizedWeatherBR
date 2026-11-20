@@ -12,7 +12,6 @@ Coastline: Natural Earth 10 m (downloaded once to <data_path>/Shapefiles/Coastli
 """
 
 import argparse
-import json
 import logging
 import sys
 import urllib.request
@@ -78,6 +77,17 @@ def wind_error_by_hour(forecasts, targets, is_real, madis_vars_o, hours, days, g
                 rows.append(dict(group=group, forecast=name, hour=h, wind=float(e[m].mean()), wind_lo=lo, wind_hi=hi,
                                  n=int(m.sum())))
     return pd.DataFrame(rows)
+
+
+def wind_error_by_station(forecasts, targets, is_real, madis_vars_o):
+    """{forecast: (stations,) mean real-only wind-vector error}, plus 'n' = real entries per station."""
+    iu, iv = madis_vars_o.index(metrics.U), madis_vars_o.index(metrics.V)
+    mask = is_real[..., iu] & is_real[..., iv]
+    out = {'n': mask.sum(0)}
+    for name in FORECASTS:
+        err = np.hypot(forecasts[name][..., iu] - targets[..., iu], forecasts[name][..., iv] - targets[..., iv])
+        out[name] = np.where(mask, err, 0).sum(0) / np.maximum(out['n'], 1)
+    return out
 
 
 def uv_cycle(forecasts, targets, is_real, madis_vars_o, hours, groups):
@@ -161,7 +171,7 @@ def main(argv=None):
     except FileNotFoundError as e:
         log.error('missing input: %s', e)
         return 1
-    data_path = json.load(open(args.run_dir / 'params.json'))['data_path']
+    data_path = baselines.run_meta(args.run_dir)[0]['data_path']
     lons, lats = madis.lon.values, madis.lat.values
     dist = coast_distance_km(lons, lats, coastline(data_path))
     coastal = dist < args.coast_km
@@ -174,7 +184,9 @@ def main(argv=None):
     out = args.run_dir / 'diurnal'
     out.mkdir(exist_ok=True)
     pd.DataFrame(dict(station=np.arange(1, len(dist) + 1), lon=lons, lat=lats, coast_km=dist,
-                      group=np.where(coastal, 'coastal', 'inland'))).to_csv(out / 'stations.csv', index=False)
+                      group=np.where(coastal, 'coastal', 'inland'),
+                      **wind_error_by_station(forecasts, targets, is_real, madis_vars_o))).to_csv(
+        out / 'stations.csv', index=False)
     hours = local_hours(times, args.utc_offset)
     err = wind_error_by_hour(forecasts, targets, is_real, madis_vars_o, hours, metrics.target_days(times), groups)
     uv = uv_cycle(forecasts, targets, is_real, madis_vars_o, hours, groups)

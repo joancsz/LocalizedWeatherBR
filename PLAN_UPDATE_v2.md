@@ -94,4 +94,4 @@ Resultado esperado: tabela de erro em que a última linha (tudo degradado) pode 
 - [x] Extra: `station_keep_n`, injeção de falhas, `era5_coarsen_deg` + testes → rodadas no notebook 03 (+ `sparse_gaps`, `coarse_050`)
 - [x] E4 densidade e filtro (desenho decidido: 6 estações fixas mantidas em toda rede; filtro avaliado nas estações de 0,8) — código e notebook 04; rodadas pendentes
 - [x] Lead 6 h como principal + varredura {1, 6, 24, 48} h (notebooks 03 e 04, `common_set.py`, tabelas `leads_*`, `degraded_l*`)
-- [ ] Documentação e tabelas (`make_tables.py` e esqueletos em `docs/` prontos; faltam os números)
+- [x] Documentação e tabelas (`docs/results_brazil.md`, `docs/results_degraded_neus.md` preenchidos 2026-11-20)

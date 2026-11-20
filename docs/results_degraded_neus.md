@@ -54,10 +54,41 @@ Reading:
   the bottleneck here.
 - Outages are the only factor that clearly degrades skill (T +0.08 K, Td +0.07 K vs base on the same entries).
 
-## Lead 6 h and the lead sweep (to run)
+## Lead 6 h and the lead sweep
 
 At 1 h the model is persistence with a small temperature correction, so the grid factor cannot show. Notebook 03 adds
 `base_l6`, `coarse_100_l6`, `sparse_gaps_l6`, `all_l6` (same factors at 6 h) and `base_l24`, `base_l48` (out to the
 paper's 48 h), each scored with `scripts/eval/common_set.py` per lead and against ERA5 / persistence for `base*`.
 
-_To fill: common-set table at 6 h, and model / ERA5 / persistence by lead (1, 6, 24, 48 h) for `base`._
+Lead 6 h, all runs on the 26 `sparse` stations and the entries real in every run (table `degraded_l6.tex`):
+
+| run | wind-vector error (m/s) | T RMSE (K) | Td RMSE (K) |
+|---|---|---|---|
+| base_l6 | 0.532 [0.514, 0.549] | 1.424 [1.396, 1.455] | 1.784 [1.738, 1.832] |
+| coarse_100_l6 | 0.554 [0.535, 0.572] | 1.527 [1.498, 1.558] | 1.765 [1.719, 1.813] |
+| sparse_gaps_l6 | **0.486** [0.470, 0.502] | **1.408** [1.380, 1.438] | **1.686** [1.644, 1.730] |
+| all_l6 | 0.499 [0.482, 0.515] | 1.471 [1.442, 1.503] | 1.714 [1.670, 1.761] |
+
+Reading at 6 h:
+- **The grid now matters for T.** A 1.0° grid costs +0.10 K T against `base_l6`, outside the CIs (wind +0.02 m/s and
+  Td are within them). At 1 h it cost nothing, so the model only uses ERA5 once the station history is stale.
+- **The sparse network is again better on its own 26 stations**: `sparse_gaps_l6` beats `base_l6` on wind and Td
+  outside the CIs, even with outages (T within them). As in Brazil E4, density is not the bottleneck at either spacing.
+- `all_l6` (26 stations, outages, 1.0°) sits between: the grid penalty on top of the sparse-network gain.
+
+`base` by lead (358 stations, table `leads_neus.tex`):
+
+| lead (h) | model wind | ERA5 wind | persistence wind | model T RMSE | persistence T RMSE | model Td RMSE | persistence Td RMSE |
+|---|---|---|---|---|---|---|---|
+| 1 | 0.401 | 2.595 | 0.403 | **0.946** | 1.150 | 0.980 | **0.842** |
+| 6 | **0.590** | 2.595 | 0.849 | **1.381** | 4.868 | **1.785** | 2.677 |
+| 24 | **0.621** | 2.596 | 1.156 | **1.462** | 4.318 | **2.188** | 5.014 |
+| 48 | **0.622** | 2.598 | 1.254 | **1.529** | 5.397 | **2.443** | 6.352 |
+
+- Only at 1 h does persistence compete (tie on wind, better on Td). From 6 h on the model wins every variable.
+- Like Brazil, model wind error flattens after 6 h (0.59 to 0.62 m/s), because ERA5 is at the target hour. These are
+  downscaling numbers, as stated at the top. Td degrades more with lead than in Brazil (1.79 to 2.44 K vs 1.22 to 1.40 K).
+- **Comparison with Brazil at 6 h** (different stations, so indicative only): NE-US `sparse_gaps_l6` 0.49 m/s, 1.41 K,
+  1.69 K against Brazil 1.06 m/s, 0.99 K, 1.22 K. Brazil wind error is about twice NE-US even with matched network
+  size and outages, while Brazil T and Td are lower. ERA5's own wind error is about the same in both (2.54 vs
+  2.60 m/s), so the extra model wind error is regional, not an effect of density or outages.

@@ -60,7 +60,9 @@ def run_meta(run_dir, **override):
 
     override replaces params keys, e.g. madis_control_ratio=0.8 for another station set of the same region.
     """
-    p = {**json.load(open(run_dir / 'params.json')), **override}
+    p = json.load(open(run_dir / 'params.json'))
+    # the run sits at <data_path>/<output_saving_path>; the stored data_path is the training machine's
+    p = {**p, 'data_path': str(Path(run_dir).resolve().parents[len(Path(p['output_saving_path']).parts) - 1]), **override}
     data_path = Path(p['data_path'])
     if p['shapefile_path'] is None:
         lon_low, lon_up, lat_low, lat_up = p['coords']

@@ -70,6 +70,7 @@ class Main:
         self.use_is_real_mask = args.use_is_real_mask
         self.station_keep_n = args.station_keep_n
         self.station_subsample_seed = args.station_subsample_seed
+        self.train_seed = args.train_seed
         self.station_keep_fraction = args.station_keep_fraction
         self.station_eval_n = args.station_eval_n
         self.gap_injection = args.gap_injection
@@ -107,7 +108,8 @@ class Main:
     def Run(self):
 
         ##### Set Random Seed #####
-        np.random.seed(100)
+        np.random.seed(self.train_seed)
+        torch.manual_seed(self.train_seed)
 
         ##### Get Device #####
         device = torch.device(
