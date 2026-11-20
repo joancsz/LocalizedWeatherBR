@@ -20,6 +20,7 @@ Lead 6 h, 26 stations, test year 2023 (`ne_brazil_{vit,gnn}/baselines.csv`, tabl
 |---|---|---|---|---|---|
 | Transformer + ERA5 Nearest | **1.057** [1.043, 1.070] | **0.991** [0.964, 1.016] | **1.224** [1.200, 1.247] | 0.08 | 0.13 |
 | GNN (Delaunay) + ERA5 grid | 1.154 [1.138, 1.169] | 1.393 [1.332, 1.465] | 1.528 [1.487, 1.573] | -0.14 | -0.40 |
+| GNN, 100 epochs | 1.142 [1.124, 1.159] | 1.368 [1.298, 1.449] | 1.505 [1.443, 1.566] | -0.12 | -0.18 |
 | ERA5 nearest | 2.541 [2.502, 2.580] | 1.328 [1.304, 1.351] | 1.818 [1.788, 1.846] | 0.16 | 0.62 |
 | persistence | 1.860 [1.831, 1.890] | 4.841 [4.763, 4.919] | 2.567 [2.494, 2.650] | -0.02 | 0.03 |
 
@@ -32,9 +33,11 @@ Lead 6 h, 26 stations, test year 2023 (`ne_brazil_{vit,gnn}/baselines.csv`, tabl
 
 Checked on the test pickles (same samples, targets and real mask as the Transformer):
 
-- **Undertrained.** Validation loss was still falling at epoch 50 (0.973 at 40, 0.957 at 50) with a wider train/val gap
-  than the Transformer (0.844 / 0.957 vs 0.815 / 0.827). The NE-US reproduction showed the same (`docs/repro_log.md`:
-  GNN "further from convergence than the Transformer").
+- **Not (mainly) undertraining.** At 50 epochs validation loss was still falling (0.973 at 40, 0.957 at 50), so a
+  100-epoch run (`ne_brazil_gnn_e100`) was trained. Its validation loss plateaus at 0.92–0.94 from epoch 40 on while
+  train loss keeps falling (0.854 to 0.795), well above the Transformer's 0.827. Test T RMSE only moves from 1.393 to
+  1.368 K, still above ERA5's 1.328 (CIs overlap); wind and Td improve within the CIs, Td bias shrinks from −0.40 to
+  −0.18 K.
 - **Broad, not one bad station.** The GNN's T RMSE is above the Transformer's at all 26 stations and at every local
   hour (1.24–1.56 K vs 0.71–1.25 K). Dropping the worst station (26) only moves 1.39 to 1.34 K.
 - **Shared outlier tail.** 1724 real T entries have |error| > 5 K, 483 of them at station 26. The Transformer misses
@@ -43,14 +46,15 @@ Checked on the test pickles (same samples, targets and real mask as the Transfor
   T RMSE is 1.16 K.
 - **Worst months: December (2.11 K) and March (1.73 K).** 4% of the GNN's squared T error falls on 2023-12-23 alone.
 
-Reading: the GNN gap is mostly training budget, not a property of the Brazil data. A longer GNN run (100 epochs) would
-settle it: notebook 04 has the cell (`ne_brazil_gnn_e100`, to run), and `make_tables.py` adds it to `e2.tex` as its
-own row. Until then, report the Transformer as the main model.
+Reading: doubling the training budget does not close the gap, so it is the architecture / setup (Delaunay message
+passing over 26 stations ~123 km apart, with the ERA5 grid), not training length. The GNN still beats ERA5 and
+persistence on wind and Td. Report the Transformer as the main model and the GNN as a weaker alternative; `e2.tex`
+has both GNN rows. At 100 epochs the GNN's E3 errors are coastal 0.804, inland 1.185 m/s (50 epochs: 0.817, 1.197).
 
 ### Station check (stations 26 and 14)
 
-`scripts/eval/station_check.py --run-dir ne_brazil_vit --stations 26 14` (plots in `ne_brazil_vit/station_check/`),
-plus the 2019–2023 processed files against ERA5. Both are observation problems, not model failures.
+`scripts/eval/station_check.py --run-dir ne_brazil_vit --stations 26 14` (plots in `ne_brazil_vit/station_check/`;
+the Colab output matches the local run), plus the 2019–2023 processed files against ERA5. Both are observation problems, not model failures.
 
 - **26, A448 Curaçá (370 m): suspect temperature sensor, 2023-01 to 2023-04.** In those months the observed daily
   maximum runs up to ~5 K above ERA5 and the model; from May on all three agree. The anomaly is bracketed by two

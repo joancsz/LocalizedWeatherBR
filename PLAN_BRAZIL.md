@@ -385,8 +385,8 @@ requirements.txt
 
 ## 10. Order of execution (checklist)
 
-- [ ] P1 — D1–D9 plus tests; old-vs-new first-epoch loss matches
-- [ ] P2 — NE-US Transformer/GNN + ERA5 reproduced, `repro_log.md`
-- [ ] P3 — region, INMET, adapter, ERA5, validation report
-- [ ] P4 — Brazil training runs
-- [ ] P5 — baselines, diurnal, density (and optionally lead-time) analyses; LaTeX tables
+- [x] P1 — D1–D9 plus tests; old-vs-new first-epoch loss matches
+- [x] P2 — NE-US Transformer/GNN + ERA5 reproduced, `repro_log.md`
+- [x] P3 — region, INMET, adapter, ERA5, validation report
+- [x] P4 — Brazil training runs
+- [x] P5 — baselines, diurnal, density (and optionally lead-time) analyses; LaTeX tables
