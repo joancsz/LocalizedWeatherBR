@@ -71,6 +71,7 @@ class Main:
         self.station_keep_n = args.station_keep_n
         self.station_subsample_seed = args.station_subsample_seed
         self.train_seed = args.train_seed
+        self.station_isolated = args.station_isolated
         self.station_keep_fraction = args.station_keep_fraction
         self.station_eval_n = args.station_eval_n
         self.gap_injection = args.gap_injection
@@ -259,7 +260,8 @@ class Main:
                                       3,  # num_heads
                                       5,  # num_layers
                                       len(external_vars),
-                                      external_len if use_external else None
+                                      external_len if use_external else None,
+                                      station_isolated=self.station_isolated
                                       )
 
         else:

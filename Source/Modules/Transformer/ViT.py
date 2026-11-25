@@ -11,7 +11,7 @@ from Modules.Transformer.Transformer import Transformer
 
 class VisionTransformer(nn.Module):
     def __init__(self, n_stations, madis_len: int, madis_n_vars_i: int, madis_n_vars_o: int, dim: int, attn_dim: int,
-                 mlp_dim: int, num_heads: int, num_layers: int, era5_n_vars=None, era5_len=None):
+                 mlp_dim: int, num_heads: int, num_layers: int, era5_n_vars=None, era5_len=None, station_isolated=False):
         # n_stations       the number of stations
         # madis_len        the length of each madis variable
         # madis_n_vars_i   the number of madis variable as input
@@ -32,6 +32,9 @@ class VisionTransformer(nn.Module):
 
         self.transformer = Transformer(dim=dim, attn_dim=attn_dim, mlp_dim=mlp_dim, num_heads=num_heads,
                                        num_layers=num_layers)
+
+        # identity mask: no station-to-station attention, so each output sees only its own inputs
+        self.register_buffer('attn_mask', torch.eye(n_stations) if station_isolated else None, persistent=False)
 
         self.head = nn.Sequential(
             nn.Linear(dim, madis_n_vars_o)
@@ -60,7 +63,7 @@ class VisionTransformer(nn.Module):
         x = embs
         # (n_batch, n_stations, dim)
 
-        x, alphas = self.transformer(x, attn_mask=None, return_attn=return_attn)
+        x, alphas = self.transformer(x, attn_mask=self.attn_mask, return_attn=return_attn)
         # (n_batch, n_stations, dim)
 
         out = self.head(x)
